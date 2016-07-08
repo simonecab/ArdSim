@@ -1,0 +1,6 @@
+UBlox	KEYWORD1
+init	KEYWORD2
+getBaudrate	KEYWORD2
+available	KEYWORD2
+read	KEYWORD2
+sendUBX_Msg	KEYWORD2

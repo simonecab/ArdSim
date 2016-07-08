@@ -1,0 +1,5 @@
+AT+UART_DEF=4800,8,1,0,0
+AT+CWLAP
+AT+CWJAP_CUR="arakneneat","x1x2x3x4x5"
+AT+PING="8.8.8.8"
+AT

@@ -1,5 +1,5 @@
 #include <SoftwareSerial.h>
-SoftwareSerial modem(8,9);
+SoftwareSerial modem(8,9); // modem(rx,tx);
 #define GSM_BOOT_PIN 3 // NEOWAY BOOT PIN
 void setup()
 {

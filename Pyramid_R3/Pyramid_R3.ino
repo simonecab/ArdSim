@@ -222,7 +222,7 @@ void setup()
   //END SETUP
   //***************************************
 
-  Serial.print(F("\nAT cmd, h(alt), a(udio), p(ut), l(ogin), g(ps)\nr(ead), b(oot), c(onf), s(tatus), t(est).\n"));
+  Serial.print(F("\nAT cmd, h(alt), a(udio), p(ut), l(ogin), g(ps)\nr(ead), b(oot), c(onf), s(tatus), t(est), S(ms)\n"));
   Serial.println(F("cmd# "));
   GpsSerial.listen();
 
@@ -265,6 +265,7 @@ void loop() // run over and over
       case 'h': Serial.println(F("send ogni ora")); NextConnectionTime = 3600000; break;
       case 'r': Serial.println(ReadFTP("command.txt")); break;
       case 't': TestSensors(); break;
+      case 'S': SendSMS("3296315064", "ciao bongo");  break;
 
       default:
         { Serial.println("<<");
@@ -386,8 +387,10 @@ int ConfGSM()
   GpsSerial.flush();
   colorWipe(LedStrip.Color(100, 100, 100), 50);   // white
 
-  // GSM_AT(F("AT + CMGF = 1")); ONLY FOR SMS
+  GSM_AT(F("AT + CMGF = 1")); // ONLY FOR SMS
   // GSM_AT(F("AT+COPS=0")); ONLY IF SIM PROBLEM
+    // GSM_AT(F("AT+CMEE=2")); FULL DIAG
+
   //  if ( GSM_AT(F("AT + CREG = 1"))       != GSMOK) return GSMERROR; //allow the network registration to provide result code
   //if ( GSM_AT(F("ATE0")) != GSMOK) return GSMERROR; //set no echo
   if ( GSM_AT(F("AT + CSCS=\"GSM\"")) != GSMOK) return GSMERROR; //set character set
@@ -957,6 +960,33 @@ void blink(int tempo, int velocita)
 }
 
 
+void SendSMS(char *number, char* message)
+{
+
+
+  long int start;
+   GsmSerial.listen();
+
+   //GSM_AT(F("AT+CMGD=4[,<delflag>]
+
+   
+
+  sprintf(TmpBuffer,"- SEND SMS \"%s\" TO %s:",message,number);    
+  Serial.println(TmpBuffer);
+  GsmSerial.write("AT+CMGS="); 
+  delay(100);
+  sprintf (TmpBuffer,"\"%s\"\r",number); // quoted number
+  GsmSerial.println(TmpBuffer); 
+  delay(100);
+ //mySerial.println("\"+393356930892\"\r"); // Replace x with mobile number
+  GsmSerial.write(message);// The SMS text you want to send
+  delay(100);
+  GsmSerial.write((char)26);// ASCII code of CTRL+Z
+  start = millis();
+  while ((millis() < (start + 7000)))
+    if (GsmSerial.available()) Serial.write(GsmSerial.read());
+
+}
 
 
 

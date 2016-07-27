@@ -393,7 +393,7 @@ int ConfGSM()
 
   //  if ( GSM_AT(F("AT + CREG = 1"))       != GSMOK) return GSMERROR; //allow the network registration to provide result code
   //if ( GSM_AT(F("ATE0")) != GSMOK) return GSMERROR; //set no echo
-  if ( GSM_AT(F("AT + CSCS=\"GSM\"")) != GSMOK) return GSMERROR; //set character set
+  if ( GSM_AT(F("AT+CSCS=\"GSM\"")) != GSMOK) return GSMERROR; //set character set
   if ( GSM_AT(F("AT+XISP=0"))       != GSMOK) return GSMERROR; //Select internal protocol stack
 
 

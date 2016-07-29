@@ -22,7 +22,7 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(4, RGBPIN, NEO_GRB + NEO_KHZ800);
 // on a live circuit...if you must, connect GND first.
 
 
-
+unsigned long fix_age, tempo, date;
 int media = 0;
 float flatm[2];
 float flonm[2];
@@ -109,8 +109,10 @@ void loop()
     strip.show();
 
   }
+
+
   gps.stats(&chars, &sentences, &failed);
-  Serial.print(" CHARS=");
+  Serial.print("\n CHARS=");
   Serial.print(chars);
   Serial.print(" SENTENCES=");
   Serial.print(sentences);
@@ -127,13 +129,16 @@ void loop()
 
 
 
-const float destlat  = 42.30;
-const float destlon  = 12.50;
+const float destlat  = 41.8925;
+const float destlon  = 12.4901;
 void blink_progress(float oldlat, float oldlon, float newlat, float newlon)
 {
   float distanza_old = sqrt((oldlat - destlat) * (oldlat - destlat) + (oldlon - destlon) * (oldlon - destlon));
   float distanza_new = sqrt((newlat - destlat) * (newlat - destlat) + (newlon - destlon) * (newlon - destlon));
   float movimento    = sqrt((oldlat - newlat)  * (oldlat - newlat)  + (oldlon - newlon)  * (oldlon - newlon));
+
+  
+  
   Serial.println("  ");
   Serial.print("old: ");       Serial.println(distanza_old, 6);
   Serial.print("new: ");       Serial.println(distanza_new, 6);

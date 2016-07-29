@@ -36,14 +36,11 @@ void setup()
   delay(500);//Wait chip initialization is complete
   sendCommand(CMD_SEL_DEV, DEV_TF);//select the TF card
   delay(200);//wait for 200ms
-  sendCommand(CMD_PLAY_W_VOL, 0X0f01);//play the first song with volume 15 class
-  delay(15000);//wait for 200ms
-
-  sendCommand(CMD_PLAY_W_VOL, 0X0f02);//play the first song with volume 15 class
-  delay(15000);//wait for 200ms
-
-  sendCommand(CMD_PLAY_W_VOL, 0X0f03);//play the first song with volume 15 class
-  delay(5000);//wait for 200ms
+while(1)
+{
+  sendCommand(CMD_PLAY_W_VOL, 0X1f02);//play the first song with volume 15 class
+  delay(30000);
+}
 }
 void loop()
 {

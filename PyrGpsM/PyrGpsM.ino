@@ -60,25 +60,30 @@ void loop()
         newData = true;
     }
   }
-#define LAT2METRI(x) ((x - 41.0) * 1852 * 60);
-#define LON2METRI(x) ((x - 12.0) * 83000);
+#define LAT2METRI(x) ((x - 41.89) * 1852 * 60);
+#define LON2METRI(x) ((x - 12.49) * 83000);
   if (newData)
   {
     unsigned long age;
     strip.setPixelColor(0, strip.Color(0, 0, 100));
     strip.show();
     gps.f_get_position(&flat[idx], &flon[idx], &age);
+ //    Serial.print("LAT=");
+ //   Serial.print(flat[idx] == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flat[idx], 6);
+  //  Serial.print(" LON=");
+ //   Serial.print(flon[idx] == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flon[idx], 6);
+    Serial.println(" ");
     flat[idx] = LAT2METRI(flat[idx]);
-    flon[idx] = LON2METRI(flat[idx]);
-    Serial.print("LAT=");
-    Serial.print(flat[idx] == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flat[idx], 6);
-    Serial.print(" LON=");
-    Serial.print(flon[idx] == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flon[idx], 6);
-    Serial.print(" SAT=");
-    Serial.print(gps.satellites() == TinyGPS::GPS_INVALID_SATELLITES ? 0 : gps.satellites());
-    Serial.print(" PREC=");
-    Serial.print(gps.hdop() == TinyGPS::GPS_INVALID_HDOP ? 0 : gps.hdop());
-
+    flon[idx] = LON2METRI(flon[idx]);
+//    Serial.print("LAT=");
+//    Serial.print(flat[idx] == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flat[idx], 6);
+//    Serial.print(" LON=");
+//    Serial.print(flon[idx] == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flon[idx], 6);
+//    Serial.print(" SAT=");
+//    Serial.print(gps.satellites() == TinyGPS::GPS_INVALID_SATELLITES ? 0 : gps.satellites());
+//    Serial.print(" PREC=");
+//    Serial.print(gps.hdop() == TinyGPS::GPS_INVALID_HDOP ? 0 : gps.hdop());
+Serial.println(" ");
     flatm[idx >> 2] += flat[idx]; // media[0] sui primi 4, media[1] sui secondi 4
     flonm[idx >> 2] += flon[idx];
 
@@ -129,8 +134,8 @@ void loop()
 
 
 
-const float destlat  = LAT2METRI(42.8925);
-const float destlon  = LON2METRI(12.4901);
+const float destlat  = LAT2METRI(41.892475);
+const float destlon  = LON2METRI(12.490230);
 void blink_progress(float oldlat, float oldlon, float newlat, float newlon)
 {
   float distanza_old = sqrt((oldlat - destlat) * (oldlat - destlat) + (oldlon - destlon) * (oldlon - destlon));
@@ -140,23 +145,24 @@ void blink_progress(float oldlat, float oldlon, float newlat, float newlon)
 
 
   Serial.println("  ");
-  Serial.print("old: ");       Serial.println(distanza_old, 6);
-  Serial.print("new: ");       Serial.println(distanza_new, 6);
-  Serial.print("mov: ");       Serial.println(movimento, 6);
+  Serial.print("old: ");       Serial.println(distanza_old, 2);
+  Serial.print("new: ");       Serial.println(distanza_new, 2);
+  Serial.print("movimento:     ");       Serial.println(movimento, 2);
+  Serial.print("avvicinamento: ");       Serial.println(distanza_old -distanza_new, 2);
   // distanza diminuita
-  if ((distanza_new + 4) < distanza_old ) strip.setPixelColor(1, strip.Color(0, 255, 0));// Green
-  if ((distanza_new + 6) < distanza_old ) strip.setPixelColor(2, strip.Color(0, 255, 0));// Green
-  if ((distanza_new + 8) < distanza_old ) strip.setPixelColor(3, strip.Color(0, 255, 0));// Green
+  if ((distanza_new + 2) < distanza_old ) strip.setPixelColor(1, strip.Color(0, 255, 0));// Green
+  if ((distanza_new + 5) < distanza_old ) strip.setPixelColor(2, strip.Color(0, 255, 0));// Green
+  if ((distanza_new + 10) < distanza_old ) strip.setPixelColor(3, strip.Color(0, 255, 0));// Green
   // distanza aumentata
-  if ((distanza_new - 4) > distanza_old ) strip.setPixelColor(1, strip.Color(255, 0, 0));// red
-  if ((distanza_new - 6) > distanza_old ) strip.setPixelColor(2, strip.Color(255, 0, 0));// red
-  if ((distanza_new - 8) > distanza_old ) strip.setPixelColor(3, strip.Color(255, 0, 0));// red
+  if ((distanza_new - 2) > distanza_old ) strip.setPixelColor(1, strip.Color(255, 0, 0));// red
+  if ((distanza_new - 5) > distanza_old ) strip.setPixelColor(2, strip.Color(255, 0, 0));// red
+  if ((distanza_new - 10) > distanza_old ) strip.setPixelColor(3, strip.Color(255, 0, 0));// red
 
   if (((distanza_new + 3) > distanza_old ) && ((distanza_new - 3) < distanza_old))
   {
     // no movimento
-    if (movimento > 4) strip.setPixelColor(1, strip.Color(255, 125, 0));  // yellow
-    if (movimento > 6) strip.setPixelColor(2, strip.Color(255, 125, 0));  // yellow
+    if (movimento > 1.5) strip.setPixelColor(1, strip.Color(255, 125, 0));  // yellow
+    if (movimento > 4) strip.setPixelColor(2, strip.Color(255, 125, 0));  // yellow
     if (movimento > 8) strip.setPixelColor(3, strip.Color(255, 125, 0));  // yellow
 
 
@@ -186,4 +192,3 @@ void colorWipe(uint32_t c, uint8_t wait) {
 
 
 }
-

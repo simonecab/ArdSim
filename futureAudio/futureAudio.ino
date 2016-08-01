@@ -38,7 +38,7 @@ void setup()
   delay(200);//wait for 200ms
 while(1)
 {
-  sendCommand(CMD_PLAY_W_VOL, 0X1f02);//play the first song with volume 15 class
+  sendCommand(CMD_PLAY_W_VOL, 0X1501);//play the first song with volume 
   delay(30000);
 }
 }

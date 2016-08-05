@@ -95,7 +95,7 @@ void setup()
   pinMode(AUDIO_RX, INPUT);
   AudioSerial.begin(9600);
   ConfAudio();
-  AudioPlay(1, 0x5); // file 1 level 15
+
 
 
 
@@ -104,7 +104,7 @@ void setup()
   TmpBuffer[0] = 0;
   TmpBuffer[1] = 0;
 
- 
+
   //***************************************
   //SETUP ON BOARD LED
   //***************************************
@@ -122,19 +122,11 @@ void setup()
   //END SETUP
   //***************************************
 
-  Serial.print(F("\nAT cmd,   a(udio),  S(ms)\n"));
+  Serial.print(F("\nAT cmd,  S(ms), c(onfIP), a(audio), l(oop), b(oot), P(rint SMS), S(endSMS)\n"));
   Serial.println(F("cmd# "));
-
-
 }
-
-
-
 void loop() // run over and over
 {
-
-
-
   //////////////////////////////////////////////////////
   // CONSOLE COMMAND PROCESSING
   //////////////////////////////////////////////////////
@@ -144,12 +136,13 @@ void loop() // run over and over
     char a = Serial.read();
     switch (a)
     {
-       case 'c': ConfGSM();  break;
+      case 'c': ConfIPGSM();  break;
       case 's': StatusFTP();  break;
-      case 'a': Serial.println(F("play file 2")); AudioPlay(2, 0x8); break;
+      case 'a': Serial.println(F("play file 1")); AudioPlay(1, 0x8); break;
+      case 'l': loopAudio(); break;
       case 'b': BootGSM();  break;
-       case 'r': Serial.println(ReadFTP("command.txt")); break;
-              case 'P': PrintSMS(); break;
+      case 'r': Serial.println(ReadFTP("command.txt")); break;
+      case 'P': PrintSMS(); break;
       case 'S': SendSMS("3296315064", "ciao bongo");  break;
 
       default:
@@ -160,11 +153,12 @@ void loop() // run over and over
           while (Serial.available())GsmSerial.write(Serial.read());
           while (millis() < start + 5000)
             if (GsmSerial.available()) {
- 
+
               Serial.write(a = GsmSerial.read());
             }
           if (GsmSerial.overflow()) {
-                       Serial.println("SoftwareSerial overflow!"); }
+            Serial.println("SoftwareSerial overflow!");
+          }
           Serial.println(">>");
 
         }
@@ -179,7 +173,7 @@ void loop() // run over and over
 
   }
 
-  
+
 
 }//end loop
 
@@ -196,12 +190,22 @@ void loop() // run over and over
 
 void PrintSMS()
 {
-ReadCodedSMS();
-Serial.print("SMS=");
-Serial.println(TmpBuffer);
-DeleteAllSMS();
+  ReadCodedSMS();
+  Serial.print("SMS=\"");
+  Serial.print(TmpBuffer + 2);
+  Serial.println("\"");
+  DeleteAllSMS();
 }
 
+
+void loopAudio()
+{
+  while (1)
+  {
+    sendCommand(CMD_PLAY_W_VOL, 0X1501);//play the first song with volume
+    delay(30000);
+  }
+}
 
 
 //////////////////////////////
@@ -211,8 +215,8 @@ DeleteAllSMS();
 void AudioPlay(unsigned int file, unsigned int vol)
 {
 
- sendCommand(CMD_PLAY_W_VOL, (vol << 8) + file);
-  
+  sendCommand(CMD_PLAY_W_VOL, (vol << 8) + file);
+
 }
 
 void ConfAudio()

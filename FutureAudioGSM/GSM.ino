@@ -64,7 +64,7 @@ void GSMsetup()
 //////////////////////////////////////////////////////
 // CONFIGURE GSM AFTER BOOT
 ////////////////////////////////////////////////////////
-int ConfGSM()
+int ConfIPGSM()
 {
   int retryCmd;
   int ret;
@@ -73,16 +73,6 @@ int ConfGSM()
   digitalWrite(LEDPIN, HIGH);   // turn the LED on
 
   GsmSerial.listen();
-
-  GSM_AT(F("AT+CMGF=1")); // ONLY FOR SMS
-  // GSM_AT(F("AT+COPS=0")); ONLY IF SIM PROBLEM
-  // GSM_AT(F("AT+CMEE=2")); FULL DIAG
-
-  //  if ( GSM_AT(F("AT+CREG=1"))       != GSMOK) return GSMERROR; //allow the network registration to provide result code
-  //if ( GSM_AT(F("ATE0")) != GSMOK) return GSMERROR; //set no echo
-  if ( GSM_AT(F("AT+CSCS=\"GSM\"")) != GSMOK) return GSMERROR; //set character set
-  if ( GSM_AT(F("AT+XISP=0"))       != GSMOK) return GSMERROR; //Select internal protocol stack
-
 
   // Check network registration status
   retryCmd = 30;
@@ -94,8 +84,6 @@ int ConfGSM()
     return GSMERROR ;
   } ;
 
-
-#ifdef GPRS
   if ( GSM_AT(F("AT+CGDCONT=1,\"IP\",\"ibox.tim.it\"")) != GSMOK) return ret; // set GPRS PDP format
 
   if ( GSM_AT(F("AT+XGAUTH=1,1,\"\",\"\"")) != GSMOK) return GSMERROR; //PDP authentication
@@ -111,7 +99,6 @@ int ConfGSM()
     return GSMERROR ;
   } ;
 
-#endif
 
   // check the receiving signal intensity only
   retryCmd = 20;
@@ -147,6 +134,7 @@ int  ReadCodedSMS()
   int ret;
   char *p, *p1;
   Serial.println(F(" - Read SMS #coded: "));
+  GSM_AT(F("AT+CSQ"));
   if ( GSM_AT(F("AT+CMGL=4")) != GSMOK) return GSMERROR;
   p = strstr(TmpBuffer, "##");
   if (!p)
@@ -155,7 +143,7 @@ int  ReadCodedSMS()
   {
     p1 = TmpBuffer;
     for ( p1 = TmpBuffer; *p != '\r'; p++, p1++) *p1 = *p;
-    *p1=0;
+    *p1 = 0;
   }
   return GSMOK;
 
@@ -442,12 +430,28 @@ int BootGSM()
     start = millis() + 8000; // wait 16 seconds
   }
 
+
+
   //  GsmSerial.println("AT+IPR=4800");
   //  GsmSerial.begin(4800);
   //  delay(500);
   //  GsmSerial.flush();
 
-  if (retry) return GSMOK ; else return GSMERROR;
+  if (retry)
+  {
+    GSM_AT(F("AT+CMGF=1")); // ONLY FOR SMS
+    // GSM_AT(F("AT+COPS=0")); ONLY IF SIM PROBLEM
+    // GSM_AT(F("AT+CMEE=2")); FULL DIAG
+
+    //  if ( GSM_AT(F("AT+CREG=1"))       != GSMOK) return GSMERROR; //allow the network registration to provide result code
+    //if ( GSM_AT(F("ATE0")) != GSMOK) return GSMERROR; //set no echo
+    if ( GSM_AT(F("AT+CSCS=\"GSM\"")) != GSMOK) return GSMERROR; //set character set
+    if ( GSM_AT(F("AT+XISP=0"))       != GSMOK) return GSMERROR; //Select internal protocol stack
+    return GSMOK ;
+  }
+
+
+  else return GSMERROR;
 }
 
 

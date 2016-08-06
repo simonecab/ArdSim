@@ -122,7 +122,7 @@ void setup()
   //END SETUP
   //***************************************
 
-  Serial.print(F("\nAT cmd,  S(ms), c(onfIP), a(audio), l(oop), b(oot), P(rint SMS), S(endSMS)\n"));
+  Serial.print(F("\nAT cmd,  S(ms), c(onfIP), a(audio), l(oop), b(oot), P(rint SMS), w(poweroff), S(endSMS)\n"));
   Serial.println(F("cmd# "));
 }
 void loop() // run over and over
@@ -143,6 +143,7 @@ void loop() // run over and over
       case 'b': BootGSM();  break;
       case 'r': Serial.println(ReadFTP("command.txt")); break;
       case 'P': PrintSMS(); break;
+      case 'w': PowerOffGSM(); break;
       case 'S': SendSMS("3296315064", "ciao bongo");  break;
 
       default:

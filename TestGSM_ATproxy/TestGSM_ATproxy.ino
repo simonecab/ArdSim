@@ -21,6 +21,7 @@ void setup()
   prova(115200L);
 
   prova(19200L);
+    prova(9600L);
 
 }
 

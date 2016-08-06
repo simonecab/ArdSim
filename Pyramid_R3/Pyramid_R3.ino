@@ -386,10 +386,10 @@ int ConfGSM()
   GsmSerial.listen();
   GpsSerial.flush();
   colorWipe(LedStrip.Color(100, 100, 100), 50);   // white
-
-  GSM_AT(F("AT + CMGF = 1")); // ONLY FOR SMS
+  GSM_AT(F("ATE1"));
+  GSM_AT(F("AT+CMEE=2"));
+  GSM_AT(F("AT+CMGF=1")); // ONLY FOR SMS
   // GSM_AT(F("AT+COPS=0")); ONLY IF SIM PROBLEM
-    // GSM_AT(F("AT+CMEE=2")); FULL DIAG
 
   //  if ( GSM_AT(F("AT + CREG = 1"))       != GSMOK) return GSMERROR; //allow the network registration to provide result code
   //if ( GSM_AT(F("ATE0")) != GSMOK) return GSMERROR; //set no echo
@@ -700,7 +700,7 @@ int GSMResponse(int n)  {
   char a = 0; int pcnt = 0; int i = 0;
 
   Serial.print (n); Serial.println(F(" RESP : "));
-  if(GsmSerial.overflow())      Serial.println("OVERFLOWWWWWW\n");
+  if (GsmSerial.overflow())      Serial.println("OVERFLOWWWWWW\n");
   while (millis() < start + timeout)
   {
     if (GsmSerial.available())
@@ -814,8 +814,8 @@ void colorWipe(uint32_t c, uint8_t wait) {
 void AudioPlay(unsigned int file, unsigned int vol)
 {
 
- sendCommand(CMD_PLAY_W_VOL, (vol << 8) + file);
-  
+  sendCommand(CMD_PLAY_W_VOL, (vol << 8) + file);
+
 }
 
 void ConfAudio()
@@ -936,7 +936,7 @@ void TestSensors()
       Serial.println(Mz);
 
 
-  int Volt = analogRead(VOLTINPIN);
+      int Volt = analogRead(VOLTINPIN);
       Serial.print("  VOLTPIN ");       Serial.println(Volt);
     }
     delay(800);
@@ -965,20 +965,20 @@ void SendSMS(char *number, char* message)
 
 
   long int start;
-   GsmSerial.listen();
+  GsmSerial.listen();
 
-   //GSM_AT(F("AT+CMGD=4[,<delflag>]
+  //GSM_AT(F("AT+CMGD=4[,<delflag>]
 
-   
 
-  sprintf(TmpBuffer,"- SEND SMS \"%s\" TO %s:",message,number);    
+
+  sprintf(TmpBuffer, "- SEND SMS \"%s\" TO %s:", message, number);
   Serial.println(TmpBuffer);
-  GsmSerial.write("AT+CMGS="); 
+  GsmSerial.write("AT+CMGS=");
   delay(100);
-  sprintf (TmpBuffer,"\"%s\"\r",number); // quoted number
-  GsmSerial.println(TmpBuffer); 
+  sprintf (TmpBuffer, "\"%s\"\r", number); // quoted number
+  GsmSerial.println(TmpBuffer);
   delay(100);
- //mySerial.println("\"+393356930892\"\r"); // Replace x with mobile number
+  //mySerial.println("\"+393356930892\"\r"); // Replace x with mobile number
   GsmSerial.write(message);// The SMS text you want to send
   delay(100);
   GsmSerial.write((char)26);// ASCII code of CTRL+Z

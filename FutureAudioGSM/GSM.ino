@@ -439,9 +439,11 @@ int BootGSM()
 
   if (retry)
   {
-    GSM_AT(F("AT+CMGF=1")); // ONLY FOR SMS
+    GSM_AT(F("ATE1"));
+    GSM_AT(F("AT+CMEE=2")); // FULL DIAG
+    GSM_AT(F("AT+CMGF=1")); //  FOR SMS
     // GSM_AT(F("AT+COPS=0")); ONLY IF SIM PROBLEM
-    // GSM_AT(F("AT+CMEE=2")); FULL DIAG
+
 
     //  if ( GSM_AT(F("AT+CREG=1"))       != GSMOK) return GSMERROR; //allow the network registration to provide result code
     //if ( GSM_AT(F("ATE0")) != GSMOK) return GSMERROR; //set no echo

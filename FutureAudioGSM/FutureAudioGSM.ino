@@ -139,7 +139,7 @@ void loop() // run over and over
       case 'c': ConfIPGSM();  break;
       case 's': StatusFTP();  break;
       case 'a': Serial.println(F("play file 1")); AudioPlay(1, 0x8); break;
-      case 'l': loopAudio(); break;
+      case 'l': Serial.println(F("audio loop")); loopAudio(); break;
       case 'b': BootGSM();  break;
       case 'r': Serial.println(ReadFTP("command.txt")); break;
       case 'P': PrintSMS(); break;
@@ -188,13 +188,18 @@ void loop() // run over and over
 //////////////////////////////
 // Print SMS
 /////////////////////////////
-
+int nsong = 1;
 void PrintSMS()
 {
   ReadCodedSMS();
-  Serial.print("SMS=\"");
-  Serial.print(TmpBuffer + 2);
-  Serial.println("\"");
+  if (TmpBuffer[0]  && TmpBuffer[2] >= '1' && TmpBuffer[2] <= '9')
+  {
+    nsong = TmpBuffer[2] - '1' + 1;
+    Serial.print("\n\nAUDIO=");
+    Serial.println(nsong);
+  } else {
+    Serial.println("No change");
+  }
   DeleteAllSMS();
 }
 
@@ -203,8 +208,9 @@ void loopAudio()
 {
   while (1)
   {
-    sendCommand(CMD_PLAY_W_VOL, 0X1501);//play the first song with volume
-    delay(30000);
+    sendCommand(CMD_PLAY_W_VOL, 0x1500 + nsong );//play the n song with volume
+    delay(29000);
+    PrintSMS();
   }
 }
 

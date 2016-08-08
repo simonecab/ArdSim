@@ -1,5 +1,7 @@
 #include <SoftwareSerial.h>
 SoftwareSerial wifi(8, 9);
+
+
 //                       TOP VIEW         -resistor-
 //  TX-8            GND
 //  CH_PD-3.3       GPIO2
@@ -26,10 +28,12 @@ void setup()
     prova(19200L);
     prova(38400L);
     prova(57600L);
-    prova(115200L);
-    wifi.println("AT+UART_DEF=4800,8,1,0,0");
     prova(4800L);
+    prova(115200L);
   }
+
+
+  // wifi.println("AT+UART_DEF=4800,8,1,0,0");  // set baudrate to 4800
   prova(4800L);
   Serial.print(F("\nAT cmd, s(can), a(ttach)\n"));
   Serial.println(F("cmd# "));

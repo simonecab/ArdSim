@@ -2,7 +2,7 @@
 #include <EEPROM.h>
 #include <Wire.h>
 #include <SoftwareSerial.h>
-#include <AltSoftSerial.h>
+
 
 //#include <Vcc.h>
 //#ifdef __AVR__
@@ -160,7 +160,7 @@ void setup()
   TmpBuffer[0] = 0;
   TmpBuffer[1] = 0;
   while (millis() < 10000 && i < 190)
-    if (GpsSerial.available())
+    while (GpsSerial.available())
     {
       TmpBuffer[i] = GpsSerial.read();
       //Serial.print(TmpBuffer[i]);
@@ -274,8 +274,8 @@ void loop() // run over and over
           delay(100);
           while (Serial.available())GsmSerial.write(Serial.read());
           while (millis() < start + 5000)
-            if (GsmSerial.available()) {
-              delay(2);
+            while (GsmSerial.available()) {
+     
               Serial.write(a = GsmSerial.read());
             }
           Serial.println(">>");

@@ -153,8 +153,7 @@ void loop() // run over and over
           delay(100);
           while (Serial.available())GsmSerial.write(Serial.read());
           while (millis() < start + 5000)
-            if (GsmSerial.available()) {
-
+            while (GsmSerial.available()) {
               Serial.write(a = GsmSerial.read());
             }
           if (GsmSerial.overflow()) {

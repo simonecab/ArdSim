@@ -142,7 +142,7 @@ void setup()
   pinMode(AUDIO_RX, INPUT);
   AudioSerial.begin(9600);
   ConfAudio();
-  AudioPlay(1, 0x5); // file 1 level 15
+  AudioPlay(1, 0x15); // file 1 , level
 
   //***************************************
   //SETUP AND TEST GPS
@@ -222,12 +222,15 @@ void setup()
   //END SETUP
   //***************************************
 
-  Serial.print(F("\nAT cmd, h(alt), a(udio), p(ut), l(ogin), g(ps)\nr(ead), b(oot), c(onf), s(tatus), t(est), S(ms)\n"));
-  Serial.println(F("cmd# "));
+  printHelp();
   GpsSerial.listen();
 
 }
-
+void printHelp()
+{
+  Serial.print(F("\nAT cmd, h(alt), a(udio), p(ut), l(ogin), g(ps_status)\nr(eadFtp), b(oot), c(onf_gsm), s(tatus), t(est), S(ms)\n"));
+  Serial.println(F("cmd# "));
+}
 
 
 void loop() // run over and over
@@ -262,7 +265,7 @@ void loop() // run over and over
       case 'a': Serial.println(F("play file 2")); AudioPlay(2, 0x8); break;
       case 'b': BootGSM();  break;
       case 'g': GetGps();  break;
-      case 'h': Serial.println(F("send ogni ora")); NextConnectionTime = 3600000; break;
+      case 'h': Serial.println(F("send ogni ora")); printHelp(); NextConnectionTime = 3600000; break;
       case 'r': Serial.println(ReadFTP("command.txt")); break;
       case 't': TestSensors(); break;
       case 'S': SendSMS("3296315064", "ciao bongo");  break;
@@ -275,7 +278,7 @@ void loop() // run over and over
           while (Serial.available())GsmSerial.write(Serial.read());
           while (millis() < start + 5000)
             while (GsmSerial.available()) {
-     
+
               Serial.write(a = GsmSerial.read());
             }
           Serial.println(">>");
@@ -453,7 +456,8 @@ int ConfGSM()
 // GET GPS LAT AND LON
 //////////////////////////////////////////////////////
 long lat, lon;
-unsigned long fix_age, time, date, speed, course;
+int gpsHdop, gpsSat;
+unsigned long fix_age, gpsTime, date, speed, course;
 
 unsigned long chars;
 unsigned short sentences, failed_checksum;
@@ -463,25 +467,31 @@ void GetGps()
   unsigned long chars;
   unsigned short sentences, failed_checksum;
   Gps.stats(&chars, &sentences, &failed_checksum);
-  Serial.print(F("rcv:fail = "));
-  Serial.print(sentences);
+  Gps.get_position(&lat, &lon, &fix_age);
+  Gps.get_datetime(&date, &gpsTime, &fix_age);
+  
+  Serial.print(F("rcv:fail time "));
+    Serial.print(sentences);
   Serial.print(":");
   Serial.println(failed_checksum);
-  // retrieves +/- lat/long in 100000ths of a degree
-  Gps.get_position(&lat, &lon, &fix_age);
+  Serial.println(gpsTime);
 
-  Serial.println(lat);
-  Serial.println(lon);
 
-  // time in hhmmsscc, date in ddmmyy
-  Gps.get_datetime(&date, &time, &fix_age);
   if (fix_age == 4294967295 )
   {
     colorWipe(LedStrip.Color(255, 255, 0), 100); // yellow
     Serial.println(F("NO Gps FIX"));
+  } else {
+    Serial.println(F("fix lat lon"));
+    Serial.println(fix_age);
+    Serial.println(lat);
+    Serial.println(lon);
   }
-  Serial.println(fix_age);
-  Serial.println(time);
+
+  Serial.print(F("sat = "));
+  Serial.println(gpsSat = Gps.satellites());
+  Serial.print(F("HDOP= "));
+  Serial.println(gpsHdop = Gps.hdop());
   Serial.println(F(" - DONE"));
 
 }
@@ -501,7 +511,7 @@ int PutFTPGps()
 
   int Volt = analogRead(VOLTINPIN);
 
-  sprintf(text, "< S = %3d %9ld %9ld %9ld V3=%04d E=%ld >", Gps.satellites(), lat, lon, time + 2000000, Volt, GErrors  );
+  sprintf(text, "< S = %3d/%4d %9ld %9ld %9ld V3=%04d E=%ld >", gpsSat, gpsHdop, lat, lon, gpsTime + 2000000, Volt, GErrors  );
   sprintf(file, "test%04d.txt", MFile++);
 
   return PutFTP( file, text);

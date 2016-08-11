@@ -22,6 +22,8 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(4, RGBPIN, NEO_GRB + NEO_KHZ800);
 // and minimize distance between Arduino and first pixel.  Avoid connecting
 // on a live circuit...if you must, connect GND first.
 
+#define LAT2METRI(x) ((x - 41.89) * 1852 * 60);
+#define LON2METRI(x) ((x - 12.49) * 83000);
 
 unsigned long fix_age, tempo, date;
 int media = 0;
@@ -39,30 +41,33 @@ void setup()
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
 
-  Serial.println("Pyramid scout ");
+  Serial.println("Pyramid scout --- v --> toggle verbose");
 
 
 }
 
-
+int verbose=0;
 void loop()
 {
+  char c;
   bool newData = false;
   unsigned long chars;
   unsigned short sentences, failed;
-
-  // For one second we parse GPS data and report some key values
-  for (unsigned long start = millis(); millis() - start < 1000;)
+  if(Serial.available())  c = Serial.read(); 
+  if(c=='v') verbose ^= 1;
+  // For two seconds we parse GPS data and report some key values
+  for (unsigned long start = millis(); millis() - start < 2000;)
   {
+    c=0;
     while (ss.available())
     {
-      char c = ss.read();
+       c = ss.read();
+      if(verbose) {if(c=='$')Serial.println(" "); Serial.write(c);} 
       if (gps.encode(c)) // Did a new valid sentence come in?
         newData = true;
     }
   }
-#define LAT2METRI(x) ((x - 41.89) * 1852 * 60);
-#define LON2METRI(x) ((x - 12.49) * 83000);
+
   if (newData)
   {
     unsigned long age;
@@ -84,7 +89,6 @@ void loop()
     //    Serial.print(gps.satellites() == TinyGPS::GPS_INVALID_SATELLITES ? 0 : gps.satellites());
     //    Serial.print(" PREC=");
     //    Serial.print(gps.hdop() == TinyGPS::GPS_INVALID_HDOP ? 0 : gps.hdop());
-    Serial.println(" ");
     flatm[idx >> 2] += flat[idx]; // media[0] sui primi 4, media[1] sui secondi 4
     flonm[idx >> 2] += flon[idx];
 
@@ -130,7 +134,7 @@ void loop()
     Serial.print(" SENTENCES=");
     Serial.print(sentences);
     Serial.print(" CSUM ERR=");
-    Serial.println(failed);
+    Serial.print(failed);
   }
 
 
@@ -143,8 +147,8 @@ void loop()
 
 
 
-const float destlat  = LAT2METRI(41.892475);
-const float destlon  = LON2METRI(12.490230);
+const float destlat  = LAT2METRI(41.913680);
+const float destlon  = LON2METRI(12.574640);
 void blink_progress(float oldlat, float oldlon, float newlat, float newlon)
 {
   float distanza_old = sqrt((oldlat - destlat) * (oldlat - destlat) + (oldlon - destlon) * (oldlon - destlon));
@@ -152,13 +156,16 @@ void blink_progress(float oldlat, float oldlon, float newlat, float newlon)
   float movimento    = sqrt((oldlat - newlat)  * (oldlat - newlat)  + (oldlon - newlon)  * (oldlon - newlon));
 
 
-
+  Serial.print(F("sat = "));
+  Serial.println(gps.satellites());
+  Serial.print(F("HDOP= "));
+  Serial.println(gps.hdop());
   Serial.println("  ");
   Serial.print("old: ");       Serial.println(distanza_old, 2);
   Serial.print("new: ");       Serial.println(distanza_new, 2);
   Serial.print("movimento:     ");       Serial.println(movimento, 2);
   Serial.print("avvicinamento: ");       Serial.println(distanza_old - distanza_new, 2);
-  Serial.print("Vai per "); Serial.print(atan2(destlon-newlon,destlat-newlat)*180.0/3.1415, 2);   Serial.print(" gradi");
+  Serial.print("Vai per "); Serial.print(atan2(destlon-newlon,destlat-newlat)*180.0/3.1415, 2);   Serial.println(" gradi");
   // distanza diminuita
   if ((distanza_new + 2) < distanza_old ) strip.setPixelColor(1, strip.Color(0, 255, 0));// Green
   if ((distanza_new + 5) < distanza_old ) strip.setPixelColor(2, strip.Color(0, 255, 0));// Green

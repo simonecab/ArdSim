@@ -32,7 +32,7 @@ void loop()
     while (ss.available())
     {
       char c = ss.read();
-      //Serial.write(c); // uncomment this line if you want to see the GPS data flowing
+      Serial.write(c); // uncomment this line if you want to see the GPS data flowing
       if (gps.encode(c)) // Did a new valid sentence come in?
         newData = true;
     }

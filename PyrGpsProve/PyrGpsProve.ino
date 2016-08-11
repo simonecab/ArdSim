@@ -1,7 +1,7 @@
 #include <SoftwareSerial.h>
 #include <Adafruit_NeoPixel.h>
 #include <TinyGPS.h>
-#include <math.h> 
+#include <math.h>
 
 #define RGBPIN 5
 
@@ -41,103 +41,116 @@ void setup()
   strip.begin();
   strip.show(); // Initialize all pixels to 'off'
 
-  Serial.println("Pyramid scout --- v --> toggle verbose");
+  Serial.println("Pyramid scout \np--> toggle print coord \nv--> toggle verbose\ns--> toggle print");
 
 
 }
 
-int verbose=0;
+int verbose = 0;
+int printCoord = 0;
+int stopPrint = 0;
 void loop()
 {
   char c;
   bool newData = false;
   unsigned long chars;
   unsigned short sentences, failed;
-  if(Serial.available())  c = Serial.read(); 
-  if(c=='v') verbose ^= 1;
+  if (Serial.available())  c = Serial.read();
+  if (c == 'v') verbose ^= 1;
+  if (c == 'p') printCoord ^= 1;
+  if (c == 's') stopPrint ^= 1;
   // For two seconds we parse GPS data and report some key values
   for (unsigned long start = millis(); millis() - start < 2000;)
   {
-    c=0;
+    c = 0;
     while (ss.available())
     {
-       c = ss.read();
-      if(verbose) {if(c=='$')Serial.println(" "); Serial.write(c);} 
+      c = ss.read();
+      if (verbose && !stopPrint) {
+        if (c == '$')Serial.println(" ");
+        Serial.write(c);
+      }
       if (gps.encode(c)) // Did a new valid sentence come in?
         newData = true;
     }
   }
-
-  if (newData)
+  
+  if (!stopPrint)
   {
-    unsigned long age;
-    strip.setPixelColor(0, strip.Color(0, 0, 100));
-    strip.show();
-    gps.f_get_position(&flat[idx], &flon[idx], &age);
-    //    Serial.print("LAT=");
-    //   Serial.print(flat[idx] == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flat[idx], 6);
-    //  Serial.print(" LON=");
-    //   Serial.print(flon[idx] == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flon[idx], 6);
-    Serial.println(" ");
-    flat[idx] = LAT2METRI(flat[idx]);
-    flon[idx] = LON2METRI(flon[idx]);
-    //    Serial.print("LAT=");
-    //    Serial.print(flat[idx] == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flat[idx], 6);
-    //    Serial.print(" LON=");
-    //    Serial.print(flon[idx] == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flon[idx], 6);
-    //    Serial.print(" SAT=");
-    //    Serial.print(gps.satellites() == TinyGPS::GPS_INVALID_SATELLITES ? 0 : gps.satellites());
-    //    Serial.print(" PREC=");
-    //    Serial.print(gps.hdop() == TinyGPS::GPS_INVALID_HDOP ? 0 : gps.hdop());
-    flatm[idx >> 2] += flat[idx]; // media[0] sui primi 4, media[1] sui secondi 4
-    flonm[idx >> 2] += flon[idx];
+
+    if (newData)
+    {
+      unsigned long age;
+      strip.setPixelColor(0, strip.Color(0, 0, 100));
+      strip.show();
+      gps.f_get_position(&flat[idx], &flon[idx], &age);
+      if (printCoord)
+      {
+        Serial.print("LAT=");
+        Serial.print(flat[idx] == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flat[idx], 6);
+        Serial.print(" LON=");
+        Serial.print(flon[idx] == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flon[idx], 6);
+      }
+      Serial.println(" ");
+      flat[idx] = LAT2METRI(flat[idx]);
+      flon[idx] = LON2METRI(flon[idx]);
+      //    Serial.print("LAT=");
+      //    Serial.print(flat[idx] == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flat[idx], 6);
+      //    Serial.print(" LON=");
+      //    Serial.print(flon[idx] == TinyGPS::GPS_INVALID_F_ANGLE ? 0.0 : flon[idx], 6);
+      //    Serial.print(" SAT=");
+      //    Serial.print(gps.satellites() == TinyGPS::GPS_INVALID_SATELLITES ? 0 : gps.satellites());
+      //    Serial.print(" PREC=");
+      //    Serial.print(gps.hdop() == TinyGPS::GPS_INVALID_HDOP ? 0 : gps.hdop());
+      flatm[idx >> 2] += flat[idx]; // media[0] sui primi 4, media[1] sui secondi 4
+      flonm[idx >> 2] += flon[idx];
 
 #if 0
-    if (idx == 3) // completed media 0, [-0,1,2,3,3] is new position; media 1 [4,4,5,6,-7] is old
-    {
-      float oldlat = (flatm[1] + flat[4] - flat[7]) / 4.0;
-      float newlat = (flatm[0] + flat[3] - flat[0]) / 4.0;
-      float oldlon = (flonm[1] + flon[4] - flon[7]) / 4.0;
-      float newlon = (flonm[0] + flon[3] - flon[0]) / 4.0;
-      blink_progress(oldlat, oldlon, newlat, newlon);
-      flatm[1] = flonm[1] = 0.0;
-    }
+      if (idx == 3) // completed media 0, [-0,1,2,3,3] is new position; media 1 [4,4,5,6,-7] is old
+      {
+        float oldlat = (flatm[1] + flat[4] - flat[7]) / 4.0;
+        float newlat = (flatm[0] + flat[3] - flat[0]) / 4.0;
+        float oldlon = (flonm[1] + flon[4] - flon[7]) / 4.0;
+        float newlon = (flonm[0] + flon[3] - flon[0]) / 4.0;
+        blink_progress(oldlat, oldlon, newlat, newlon);
+        flatm[1] = flonm[1] = 0.0;
+      }
 
 
-    if (idx == 7) // completed media 1 [-4,5,6,7,7] is new position. media 0 [0,0,1,2,-3]  is old
-    {
-      float oldlat = (flatm[0] + flat[0] - flat[3]) / 4.0;
-      float newlat = (flatm[1] + flat[7] - flat[4]) / 4.0;
-      float oldlon = (flonm[0] + flon[0] - flon[3]) / 4.0;
-      float newlon = (flonm[1] + flon[7] - flon[4]) / 4.0;
-      blink_progress(oldlat, oldlon, newlat, newlon);
-      flatm[0] = flonm[0] = 0.0;
-    }
+      if (idx == 7) // completed media 1 [-4,5,6,7,7] is new position. media 0 [0,0,1,2,-3]  is old
+      {
+        float oldlat = (flatm[0] + flat[0] - flat[3]) / 4.0;
+        float newlat = (flatm[1] + flat[7] - flat[4]) / 4.0;
+        float oldlon = (flonm[0] + flon[0] - flon[3]) / 4.0;
+        float newlon = (flonm[1] + flon[7] - flon[4]) / 4.0;
+        blink_progress(oldlat, oldlon, newlat, newlon);
+        flatm[0] = flonm[0] = 0.0;
+      }
 #else
-    if (idx != 0)
-    {
-      blink_progress(flat[idx - 1], flon[idx - 1], flat[idx], flon[idx]);
-    }else{
-      blink_progress(flat[7], flon[7], flat[idx], flon[idx]);
-    }
+      if (idx != 0)
+      {
+        blink_progress(flat[idx - 1], flon[idx - 1], flat[idx], flon[idx]);
+      } else {
+        blink_progress(flat[7], flon[7], flat[idx], flon[idx]);
+      }
 #endif
 
-    idx++;
-    if (idx == 8) idx = 0;
+      idx++;
+      if (idx == 8) idx = 0;
 
-  } else {
-    strip.setPixelColor(0, strip.Color(100, 0,  0));
-    strip.show();
-    gps.stats(&chars, &sentences, &failed);
-    Serial.print("\n CHARS=");
-    Serial.print(chars);
-    Serial.print(" SENTENCES=");
-    Serial.print(sentences);
-    Serial.print(" CSUM ERR=");
-    Serial.print(failed);
+    } else {
+      strip.setPixelColor(0, strip.Color(100, 0,  0));
+      strip.show();
+      gps.stats(&chars, &sentences, &failed);
+      Serial.print("\n CHARS=");
+      Serial.print(chars);
+      Serial.print(" SENTENCES=");
+      Serial.print(sentences);
+      Serial.print(" CSUM ERR=");
+      Serial.print(failed);
+    }
+
   }
-
-
   if (chars == 0)
     Serial.println("** No characters received from GPS: check wiring **");
 
@@ -147,8 +160,8 @@ void loop()
 
 
 
-const float destlat  = LAT2METRI(41.913680);
-const float destlon  = LON2METRI(12.574640);
+const float destlat  = LAT2METRI(41.913841);
+const float destlon  = LON2METRI(12.574563);
 void blink_progress(float oldlat, float oldlon, float newlat, float newlon)
 {
   float distanza_old = sqrt((oldlat - destlat) * (oldlat - destlat) + (oldlon - destlon) * (oldlon - destlon));
@@ -165,7 +178,7 @@ void blink_progress(float oldlat, float oldlon, float newlat, float newlon)
   Serial.print("new: ");       Serial.println(distanza_new, 2);
   Serial.print("movimento:     ");       Serial.println(movimento, 2);
   Serial.print("avvicinamento: ");       Serial.println(distanza_old - distanza_new, 2);
-  Serial.print("Vai per "); Serial.print(atan2(destlon-newlon,destlat-newlat)*180.0/3.1415, 2);   Serial.println(" gradi");
+  Serial.print("Vai per "); Serial.print(atan2(destlon - newlon, destlat - newlat) * 180.0 / 3.1415, 2);   Serial.println(" gradi");
   // distanza diminuita
   if ((distanza_new + 2) < distanza_old ) strip.setPixelColor(1, strip.Color(0, 255, 0));// Green
   if ((distanza_new + 5) < distanza_old ) strip.setPixelColor(2, strip.Color(0, 255, 0));// Green

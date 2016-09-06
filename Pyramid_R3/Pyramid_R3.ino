@@ -9,7 +9,7 @@
 //#include <avr/power.h>
 //#endif
 
-
+DO NOT USE - USE STRUCT INSTEAD
 
 char TmpBuffer[200];
 

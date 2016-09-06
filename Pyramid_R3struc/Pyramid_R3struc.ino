@@ -22,9 +22,7 @@ char TmpBuffer[200];
 // #define GSM_BOOT_PIN  -1   // if Neoway M590 boot pin NOT available
 
 #define LEDSTRIPPIN   5   // RGB LED Strip
-
 #define LEDPIN        13  // default arduino LED
-
 #define VOLTINPIN     1   // Analog input connected to intermediate battery (less than 5v)
 
 
@@ -52,7 +50,6 @@ int16_t AcX, AcY, AcZ, GyX, GyY, GyZ;  // Temp is ignored
 
 // REQUIRED IF MPU6050 ACCEL/GYRO IS USED
 const int MPU_addr = 0x68; // I2C address of the MPU-6050
-
 
 // REQUIRED ONLY IF ADXL345 ACCEL IS USED
 #ifdef ADXL345

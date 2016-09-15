@@ -16,11 +16,14 @@ SoftwareSerial mySerial(ARDUINO_RX, ARDUINO_TX);
 // il file in play e' /01/001xxx.wav 
 
 
-static int8_t Send_buf[8] = {0} ;
+static unsigned char Send_buf[8] = {0} ;
 
 #define CMD_PLAY_W_INDEX 0X03
 #define CMD_SET_VOLUME 0X06
 #define CMD_SEL_DEV 0X09
+#define CMD_SLEEP 0X0A
+#define CMD_WAKE 0X0B
+#define CMD_RESET 0X0C
 #define DEV_TF 0X02
 #define CMD_PLAY 0X0D
 #define CMD_PAUSE 0X0E
@@ -28,25 +31,32 @@ static int8_t Send_buf[8] = {0} ;
 #define SINGLE_CYCLE_ON 0X00
 #define SINGLE_CYCLE_OFF 0X01
 #define CMD_PLAY_W_VOL 0X22
+#define CMD_DAC 0X1A
 
 void setup()
 {
   Serial.begin(9600);
   mySerial.begin(9600);
   delay(500);//Wait chip initialization is complete
+  sendCommand(CMD_RESET, 0);//chip reset
+  delay(200);//wait for 200ms
   sendCommand(CMD_SEL_DEV, DEV_TF);//select the TF card
   delay(200);//wait for 200ms
-  sendCommand(CMD_PLAY_W_VOL, 0X0f01);//play the first song with volume 15 class
-  delay(15000);//wait for 200ms
+  sendCommand(CMD_DAC, 0X00);//start DAC
+    delay(2000);//wait for 200ms
+  sendCommand(CMD_PLAY_W_VOL, 0X1401);//play the first song with volume 15 class
+  delay(5000); 
 
-  sendCommand(CMD_PLAY_W_VOL, 0X0f02);//play the first song with volume 15 class
-  delay(15000);//wait for 200ms
-
-  sendCommand(CMD_PLAY_W_VOL, 0X0f03);//play the first song with volume 15 class
+  sendCommand(CMD_PLAY_W_VOL, 0X1402);//play the first song with volume 15 class
   delay(5000);//wait for 200ms
+
+  sendCommand(CMD_PLAY_W_VOL, 0X1403);//play the first song with volume 15 class
+ 
+  delay(5000);//wait for 200ms
+    sendCommand(CMD_DAC, 0X01);//stop DAC
 }
 void loop()
-{
+{ 
 
 }
 
@@ -63,8 +73,9 @@ void sendCommand(int8_t command, int16_t dat)
   Send_buf[7] = 0xef; //ending byte
   for (uint8_t i = 0; i < 8; i++) //
   {
-    Serial.println(Send_buf[i]);
+    Serial.print(Send_buf[i],HEX);   Serial.print(" ");
     mySerial.write(Send_buf[i]) ;
   }
+    Serial.println(" ");
 }
 

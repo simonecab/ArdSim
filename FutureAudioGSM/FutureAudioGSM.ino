@@ -78,7 +78,8 @@ int Happy = HUNKNOWN;
 #define BLINK_SLOW 800
 
 
-
+#define START_AUTO_LOOP_TIME 10000
+int autoLoop = 1;
 /////////////////////////////////////////
 // SETUP AND SELF TEST
 /////////////////////////////////////////
@@ -122,7 +123,7 @@ void setup()
   //END SETUP
   //***************************************
 
-  Serial.print(F("\nAT cmd,  S(ms), c(onfIP), a(audio), l(oop), b(oot), P(rint SMS), w(poweroff), S(endSMS)\n"));
+  Serial.print(F("\nAT cmd,  c(onfIP), a(audio), l(oop), b(oot), h(alt no autoLoop), P(rint SMS), w(pwroff), S(endSMS)\n"));
   Serial.println(F("cmd# "));
 }
 void loop() // run over and over
@@ -141,6 +142,7 @@ void loop() // run over and over
       case 'a': Serial.println(F("play file 1")); AudioPlay(1, 0x8); break;
       case 'l': Serial.println(F("audio loop")); loopAudio(); break;
       case 'b': BootGSM();  break;
+      case 'h': Serial.println(F("no auto loop")); autoLoop = 0;  break;
       case 'r': Serial.println(ReadFTP("command.txt")); break;
       case 'P': PrintSMS(); break;
       case 'w': PowerOffGSM(); break;
@@ -172,6 +174,14 @@ void loop() // run over and over
     Serial.println(F("cmd# "));
 
   }
+  if (autoLoop)
+    if (millis() > START_AUTO_LOOP_TIME)
+    {
+      Serial.println("Auto Loop!");
+      BootGSM();
+      ConfIPGSM(); 
+      loopAudio();
+    }
 
 
 

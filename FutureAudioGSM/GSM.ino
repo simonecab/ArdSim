@@ -137,14 +137,13 @@ int  ReadCodedSMS()
   GSM_AT(F("AT+CSQ"));
   if ( GSM_AT(F("AT+CMGL=4")) != GSMOK) return GSMERROR;
   p = strstr(TmpBuffer, "##");
-  if (!p)
-    TmpBuffer[0] = 0;
-  else
+  if (p)
   {
     p1 = TmpBuffer;
     for ( p1 = TmpBuffer; *p != '\r'; p++, p1++) *p1 = *p;
     *p1 = 0;
   }
+  TmpBuffer[0] = 0;
   return GSMOK;
 
 }

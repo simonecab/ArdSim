@@ -4,6 +4,13 @@
 #include <SoftwareSerial.h>
 
 
+// PIN POWER NEOWAY 2 e 4 CONNECTED TO ARDUINO 5V e GND congigui (2to5V  4toGND)
+// PIN POWER CEPRI  4 e 2 CONNECTED TO ARDUINO 5V e GND congigui (2toGND 4toVCC)
+#define GSM_RX    8      // CEPRI PIN 9   : NEOWAY PIN 14
+#define GSM_TX    9      // CEPRI PIN 10  : NEOWAY PIN 16
+#define GSM_BOOT_PIN  3       // Neoway M590 boot pin if available : CEPRI PIN 14 : NEOWAY PIN 19
+// #define GSM_BOOT_PIN  -1   // if Neoway M590 boot pin NOT available
+
 char TmpBuffer[200];
 
 /////////////////////////////////////////
@@ -45,10 +52,6 @@ SoftwareSerial AudioSerial(AUDIO_RX, AUDIO_TX);
 // GSM/FTP DEFINITION
 /////////////////////////////////////////
 SoftwareSerial GsmSerial(GSM_RX, GSM_TX); // RX, TX GSM
-
-
-
-
 #define GSMIGNOREERROR 1
 #define GSMERROR       2
 #define GSMOK          1
@@ -106,6 +109,10 @@ void setup()
   TmpBuffer[1] = 0;
 
 
+
+
+
+
   //***************************************
   //SETUP ON BOARD LED
   //***************************************
@@ -117,15 +124,17 @@ void setup()
   //***************************************
   //SETUP GSM
   //***************************************
-  GSMsetup();
+  SetupGSM();
 
   //***************************************
   //END SETUP
   //***************************************
 
-  Serial.print(F("\nAT cmd,  c(onfIP), a(audio), l(oop), b(oot), h(alt no autoLoop), P(rint SMS), w(pwroff), S(endSMS)\n"));
+  Serial.print(F("\nAT cmd,  S(ms), c(onfIP), a(audio), l(oop), b(oot), P(rocess coded SMS),\n h(alt loop), w(poweroff), R(ead SMS), S(endSMS)\n"));
   Serial.println(F("cmd# "));
 }
+
+
 void loop() // run over and over
 {
   //////////////////////////////////////////////////////
@@ -137,14 +146,15 @@ void loop() // run over and over
     char a = Serial.read();
     switch (a)
     {
-      case 'c': ConfIPGSM();  break;
+      case 'c': ConfGSM();  break;
       case 's': StatusFTP();  break;
       case 'a': Serial.println(F("play file 1")); AudioPlay(1, 0x8); break;
       case 'l': Serial.println(F("audio loop")); loopAudio(); break;
       case 'b': BootGSM();  break;
-      case 'h': Serial.println(F("no auto loop")); autoLoop = 0;  break;
       case 'r': Serial.println(ReadFTP("command.txt")); break;
-      case 'P': PrintSMS(); break;
+      case 'P': ReadCodedSMS(); break;
+    case 'h': Serial.println(F("no auto loop")); autoLoop = 0;  break;
+      case 'R': Serial.println(ReadSMS()); Serial.println(TmpBuffer); break;
       case 'w': PowerOffGSM(); break;
       case 'S': SendSMS("3296315064", "ciao bongo");  break;
 
@@ -172,8 +182,6 @@ void loop() // run over and over
     }
 
     Serial.println(F("cmd# "));
-
-  }
   if (autoLoop)
     if (millis() > START_AUTO_LOOP_TIME)
     {
@@ -182,6 +190,7 @@ void loop() // run over and over
       ConfIPGSM(); 
       loopAudio();
     }
+  }
 
 
 
@@ -195,23 +204,36 @@ void loop() // run over and over
 
 
 //////////////////////////////
-// Print SMS
+// coded SMS change Song
 /////////////////////////////
 int nsong = 1;
-void PrintSMS()
+
+void ReadCodedSMS()
 {
-  ReadCodedSMS();
-  if (TmpBuffer[0]  && TmpBuffer[2] >= '1' && TmpBuffer[2] <= '9')
+  char *p;
+  Serial.println(F(" - Read SMS #coded: "));
+  if (ReadSMS() != GSMOK)
   {
-    nsong = TmpBuffer[2] - '1' + 1;
-    Serial.print("\n\nAUDIO=");
-    Serial.println(nsong);
+    Serial.println("\nNO SMS");
   } else {
-    Serial.println("No change");
+    Serial.println("\nSMS: ");
+    Serial.println(TmpBuffer);
+    p = strstr(TmpBuffer, "##");
+    if (p)
+    {
+      if (TmpBuffer[2]  && TmpBuffer[2] >= '1' && TmpBuffer[2] <= '9')
+      {
+        nsong = TmpBuffer[2] - '1' + 1;
+        Serial.print("\n\nAUDIO=");
+        Serial.println(nsong);
+      } else {
+        Serial.println("No change");
+      }
+    }
   }
   DeleteAllSMS();
+  TmpBuffer[0] = 0;
 }
-
 
 void loopAudio()
 {
@@ -219,7 +241,7 @@ void loopAudio()
   {
     sendCommand(CMD_PLAY_W_VOL, 0x1500 + nsong );//play the n song with volume
     delay(29000);
-    PrintSMS();
+    ReadCodedSMS();
   }
 }
 

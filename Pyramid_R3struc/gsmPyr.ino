@@ -1,3 +1,37 @@
+/////////////////////////////////////////
+// GSM/FTP DEFINITION
+/////////////////////////////////////////
+//extern SoftwareSerial GsmSerial(GSM_RX, GSM_TX); // RX, TX GSM
+
+long int GSMErrors = 0;
+
+#define GSMIGNOREERROR 1
+#define GSMERROR       2
+#define GSMOK          1
+#define GSMUNKNOWN     0
+
+/////////////////////////////////////////
+// SETUP GSM
+/////////////////////////////////////////
+
+void SetupGSM()
+{
+
+  //***************************************
+  //SETUP GSM
+  //***************************************
+
+  GsmSerial.begin(19200);
+  //  GsmSerial.listen();
+  //  GsmSerial.flush();
+  if (GSM_BOOT_PIN >= 0 )
+  {
+    digitalWrite(GSM_BOOT_PIN, HIGH);
+    pinMode(GSM_BOOT_PIN, OUTPUT);
+  }
+
+}
+
 //////////////////////////////////////////////////////
 // CONFIGURE GSM AFTER BOOT
 ////////////////////////////////////////////////////////
@@ -10,32 +44,19 @@ int ConfGSM()
   digitalWrite(LEDPIN, HIGH);   // turn the LED on
 
   GsmSerial.listen();
-  GpsSerial.flush();
-  colorWipe(LedStrip.Color(100, 100, 100), 50);   // white
-  GSM_AT(F("ATE1"));
-  GSM_AT(F("AT+CMEE=2"));
-  GSM_AT(F("AT+CMGF=1")); // ONLY FOR SMS
-  // GSM_AT(F("AT+COPS=0")); ONLY IF SIM PROBLEM
-
-  //  if ( GSM_AT(F("AT + CREG = 1"))       != GSMOK) return GSMERROR; //allow the network registration to provide result code
-  //if ( GSM_AT(F("ATE0")) != GSMOK) return GSMERROR; //set no echo
-  if ( GSM_AT(F("AT+CSCS=\"GSM\"")) != GSMOK) return GSMERROR; //set character set
-  if ( GSM_AT(F("AT+XISP=0"))       != GSMOK) return GSMERROR; //Select internal protocol stack
-
-
+  
   // Check network registration status
   retryCmd = 30;
   do {
     delay(2000);
     if ( GSM_AT(F("AT+CREG?")) != GSMOK) if ( GSM_AT(F("AT+CREG?")) != GSMOK) return GSMERROR ; // retry if timeout
-    colorWipe(LedStrip.Color(255, 2550, 0), 50); // yellow
   }   while ((strstr(TmpBuffer, ",1") <= 0 ) && --retryCmd); // not registered on network
   if (retryCmd <= 0) {
     return GSMERROR ;
   } ;
 
-
   if ( GSM_AT(F("AT+CGDCONT=1,\"IP\",\"ibox.tim.it\"")) != GSMOK) return ret; // set GPRS PDP format
+
   if ( GSM_AT(F("AT+XGAUTH=1,1,\"\",\"\"")) != GSMOK) return GSMERROR; //PDP authentication
   if ( GSM_AT(F("AT+XIIC=1"))               != GSMOK) return GSMERROR; //establish PPP link
 
@@ -49,7 +70,6 @@ int ConfGSM()
     return GSMERROR ;
   } ;
 
-
   // check the receiving signal intensity only
   retryCmd = 20;
   do {
@@ -59,9 +79,7 @@ int ConfGSM()
     return GSMERROR ;
   } ;
 
-
   digitalWrite(LEDPIN, LOW);
-
 
   // retryCmd = 2;
   // do {
@@ -69,15 +87,30 @@ int ConfGSM()
   // if (GSMOK != GSMResponse(3)) { --retryCmg; }
   // if (!retryCmd) { return GSMERROR ; } ;
 
-
   Serial.println(F("- DONE"));
   return GSMOK;
 
 }
 
+////////////////////////////////////////////////////
 
+int  ReadSMS()
+{
+  int ret;
+  char *p, *p1;
+  Serial.println(F(" - Read SMS "));
+  GSM_AT(F("AT+CSQ"));
+  if ( GSM_AT(F("AT+CMGL=4")) != GSMOK) return GSMERROR;
+  return GSMOK;
+}
+////////////////////////////////////////////////////
 
+int  DeleteAllSMS()
+{
 
+  if ( GSM_AT(F("AT+CMGD=0,4")) != GSMOK) return GSMERROR;
+  return GSMOK;
+}
 
 ////////////////////////////////////////////////////
 
@@ -105,13 +138,11 @@ int  LoginFTP()
   return GSMOK;
 }
 
-
 ////////////////////////////////////////////////////
 
 int  StatusFTP()
 {
   int ret;
-
 
   GsmSerial.listen();
   Serial.println(F(" - StatusFTP: "));
@@ -122,8 +153,6 @@ int  StatusFTP()
   ret = (strstr(TmpBuffer, ":login") > 0);
   if (ret) return GSMOK; else return GSMERROR;
 }
-
-
 
 ////////////////////////////////////////////////////
 
@@ -162,7 +191,7 @@ int PutFTP(const char *file, char *obuf)
   TmpBuffer[i] = 0;
   if (result == -1) {
     Serial.println(F(" - DONE NO PUT"));
-    GErrors += 1000;
+    GSMErrors += 1000;
     return GSMERROR;
   }
   GsmSerial.write(obuf);// The  text you want to send
@@ -170,7 +199,7 @@ int PutFTP(const char *file, char *obuf)
   Serial.println(obuf);  Serial.println(strlen(obuf));
   if (GSMResponse(1) != GSMOK) {
     Serial.println(F("NO RESP"));
-    GErrors += 1000;
+    GSMErrors += 1000;
     return GSMERROR;
   }
   Serial.println(F("DONE"));
@@ -219,11 +248,6 @@ char *ReadFTP(char *filename)
   return TmpBuffer;
 }
 
-
-
-
-
-
 ////////////////////////////////////////////////////
 
 int GSM_AT(const __FlashStringHelper * ATCommand)
@@ -231,7 +255,7 @@ int GSM_AT(const __FlashStringHelper * ATCommand)
   int i = 0;
   int done = GSMUNKNOWN;
   long int start = millis();
-  colorWipe(LedStrip.Color(50, 50, 50), 50);
+
   TmpBuffer[0] = 0;
   //Serial.println(ATCommand);
   GsmSerial.println(ATCommand);
@@ -243,7 +267,7 @@ int GSM_AT(const __FlashStringHelper * ATCommand)
     if (i > sizeof(TmpBuffer)) {
       Serial.println(F("BUFFER FULL\n"));
       done = GSMERROR;
-      GErrors++;
+      GSMErrors++;
     }
   };
   TmpBuffer[i] = 0;
@@ -251,7 +275,7 @@ int GSM_AT(const __FlashStringHelper * ATCommand)
   {
     Serial.println(F(" - GSM: "));
     if (done == GSMUNKNOWN)  Serial.println(F(" TIMEOUT, BOOT ? "));
-    GErrors++;
+    GSMErrors++;
   }
   Serial.println(TmpBuffer);
 
@@ -261,7 +285,6 @@ int GSM_AT(const __FlashStringHelper * ATCommand)
       Serial.write(GsmSerial.read());
   return done;
 }
-
 
 ////////////////////////////////////////////////////
 
@@ -292,27 +315,24 @@ int GSMResponse(int n)  {
 
   if (i > sizeof(TmpBuffer)) {
     Serial.println(F("BUFFER FULL\n"));
-    GErrors++;
+    GSMErrors++;
     return GSMERROR;
   }
   TmpBuffer[i] = 0;
   Serial.println(F("\nEND RESP"));
 
-
   if (pcnt < n   ||  (strstr(TmpBuffer, "Error") > 0)) {
     Serial.println(F("\nTimeout / Error response"));
-    colorWipe(LedStrip.Color(255, 0, 0), 50); // Red
-    GErrors++;
+
+    GSMErrors++;
     return GSMERROR;
   } else {
     return GSMOK;
   }
 }
 
-
-
-
 ////////////////////////////////////////////////////
+
 void SendSMS(char *number, char* message)
 {
 
@@ -338,8 +358,6 @@ void SendSMS(char *number, char* message)
 
 }
 
-
-
 ///////////////////////////////////////////////////
 
 void PowerOffGSM()
@@ -351,10 +369,9 @@ void PowerOffGSM()
   //  delay(700);
   //  digitalWrite(GSM_BOOT_PIN, HIGH);
 
-  while ( GSM_AT(F("AT + CPWROFF")) == GSMOK)   delay(2000);   GErrors--;
+  while ( GSM_AT(F("AT + CPWROFF")) == GSMOK)   delay(2000);   GSMErrors--;
   return;
 }
-
 
 ////////////////////////////////////////////////////
 
@@ -369,7 +386,7 @@ int BootGSM()
   {
     if (GSM_BOOT_PIN < 0) return GSMERROR;
     Serial.println(F("BootGSM"));
-    GErrors--;
+    GSMErrors--;
     digitalWrite(GSM_BOOT_PIN, LOW);
     delay(700);
     digitalWrite(GSM_BOOT_PIN, HIGH);
@@ -382,8 +399,20 @@ int BootGSM()
   //  GsmSerial.begin(4800);
   //  delay(500);
   //  GsmSerial.flush();
-
-  if (retry) return GSMOK ; else return GSMERROR;
+ if (retry)  // boot OK
+  {
+    GSM_AT(F("ATE1"));
+    GSM_AT(F("AT+CMEE=2")); // FULL DIAG
+    GSM_AT(F("AT+CMGF=1")); //  FOR SMS
+    // GSM_AT(F("AT+COPS=0")); ONLY IF SIM PROBLEM
+    //  if ( GSM_AT(F("AT+CREG=1"))       != GSMOK) return GSMERROR; //allow the network registration to provide result code
+    //if ( GSM_AT(F("ATE0")) != GSMOK) return GSMERROR; //set no echo
+    if ( GSM_AT(F("AT+CSCS=\"GSM\"")) != GSMOK) return GSMERROR; //set character set
+    if ( GSM_AT(F("AT+XISP=0"))       != GSMOK) return GSMERROR; //Select internal protocol stack
+    return GSMOK ;
+  }
+  else return GSMERROR;
+  
 }
 
 

@@ -83,7 +83,7 @@ TinyGPS Gps;
 SoftwareSerial GsmSerial(GSM_RX, GSM_TX); // RX, TX GSM
 //AltSoftSerial GsmSerial;
 
-long int GErrors = 0;
+extern long int GSMErrors;
 
 #define GSMIGNOREERROR 1
 #define GSMERROR       2
@@ -179,17 +179,9 @@ void setup()
   //***************************************
   //SETUP GSM
   //***************************************
-  pinMode(GSM_TX, OUTPUT);
-  pinMode(GSM_RX, INPUT);
-  GsmSerial.begin(19200);
-  //  GsmSerial.listen();
-  //  GsmSerial.flush();
-  if (GSM_BOOT_PIN >= 0 )
-  {
-    digitalWrite(GSM_BOOT_PIN, HIGH);
-    pinMode(GSM_BOOT_PIN, OUTPUT);
-  }
+  SetupGSM();
 
+  
   //***************************************
   //SETUP I2C SENSORS
   //***************************************
@@ -217,7 +209,7 @@ void setup()
 }
 void printHelp()
 {
-  Serial.print(F("\nAT cmd, h(alt), a(udio), p(ut), l(ogin), g(ps_status)\nr(eadFtp), b(oot), c(onf_gsm), s(tatus), t(est), S(ms)\n"));
+  Serial.print(F("\nAT cmd, h(alt), a(udio), p(ut), l(ogin), g(ps_status)\nr(eadFtp), b(oot), c(onf_gsm), s(tatus), t(est), R(ead), S(end)\n"));
   Serial.println(F("cmd# "));
 }
 
@@ -256,6 +248,7 @@ void loop() // run over and over
       case 'g': PutFTPGps(GSMUNKNOWN);  break;
       case 'h': Serial.println(F("send ogni ora")); printHelp(); NextConnectionTime = 3600000; ReduceLed = 1; break;
       case 'r': Serial.println(ReadFTP("command.txt")); break;
+      case 'R': Serial.println(ReadSMS());Serial.println(TmpBuffer); break;
       case 't': TestSensors(); break;
       case 'S': SendSMS("3296315064", "ciao bongo");  break;
 
@@ -415,7 +408,7 @@ int PutFTPGps(int transmit)
   Serial.println(gpsHdop = Gps.hdop());
 
 
-  sprintf(text, "< S = %3d/%4d %9ld %9ld %9ld V3=%04d E=%ld >", gpsSat, gpsHdop, lat, lon, gpsTime + 2000000, Volt, GErrors  );
+  sprintf(text, "< S = %3d/%4d %9ld %9ld %9ld V3=%04d E=%ld >", gpsSat, gpsHdop, lat, lon, gpsTime + 2000000, Volt, GSMErrors  );
   sprintf(file, "test%04d.txt", MFile++);
 if(transmit)
   return PutFTP( file, text);

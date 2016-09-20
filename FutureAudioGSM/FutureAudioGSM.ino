@@ -220,9 +220,9 @@ void ReadCodedSMS()
     p = strstr(TmpBuffer, "##");
     if (p)
     {
-      if (TmpBuffer[2]  && TmpBuffer[2] >= '1' && TmpBuffer[2] <= '9')
+      if (p[2]  && p[2] >= '1' && p[2] <= '9')
       {
-        nsong = TmpBuffer[2] - '1' + 1;
+        nsong = p[2] - '0';
         Serial.print("\n\nAUDIO=");
         Serial.println(nsong);
       } else {

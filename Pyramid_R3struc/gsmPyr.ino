@@ -54,7 +54,7 @@ int ConfGSM()
   if (retryCmd <= 0) {
     return GSMERROR ;
   } ;
-
+  
   if ( GSM_AT(F("AT+CGDCONT=1,\"IP\",\"ibox.tim.it\"")) != GSMOK) return ret; // set GPRS PDP format
 
   if ( GSM_AT(F("AT+XGAUTH=1,1,\"\",\"\"")) != GSMOK) return GSMERROR; //PDP authentication
@@ -69,7 +69,7 @@ int ConfGSM()
   if (!retryCmd) {
     return GSMERROR ;
   } ;
-
+  
   // check the receiving signal intensity only
   retryCmd = 20;
   do {
@@ -78,15 +78,15 @@ int ConfGSM()
   if (!retryCmd) {
     return GSMERROR ;
   } ;
-
+  
   digitalWrite(LEDPIN, LOW);
-
+  
   // retryCmd = 2;
   // do {
   // GsmSerial.println(F("AT+DNS=\"ftp.cabasino.com\""));
-  // if (GSMOK != GSMResponse(3)) { --retryCmg; }
+  // if (GSMOK != GSM_Response(3)) { --retryCmg; }
   // if (!retryCmd) { return GSMERROR ; } ;
-
+  
   Serial.println(F("- DONE"));
   return GSMOK;
 
@@ -99,6 +99,7 @@ int  ReadSMS()
   int ret;
   char *p, *p1;
   Serial.println(F(" - Read SMS "));
+  GsmSerial.listen();
   GSM_AT(F("AT+CSQ"));
   if ( GSM_AT(F("AT+CMGL=4")) != GSMOK) return GSMERROR;
   return GSMOK;
@@ -107,7 +108,7 @@ int  ReadSMS()
 
 int  DeleteAllSMS()
 {
-
+  GsmSerial.listen();
   if ( GSM_AT(F("AT+CMGD=0,4")) != GSMOK) return GSMERROR;
   return GSMOK;
 }
@@ -119,19 +120,19 @@ int  LoginFTP()
   int retry;
 
   GsmSerial.listen();
-  delay(2000);
+
 
   Serial.println(F(" - LoginFTP: "));
   GsmSerial.println(F("AT"));
 
   long int start = millis();
   while (millis() < start + 1000) if (GsmSerial.available())Serial.print((char) GsmSerial.read());
-
+  
   retry = 2;
   do {
 
     GsmSerial.println(F("At+ftplogin=217.64.195.210,21,cabasino.com,Catto1"));
-  } while ((GSMOK != GSMResponse(2)) && (--retry)) ;
+  } while ((GSMOK != GSM_Response(2)) && (--retry)) ;
   if (!retry) return GSMERROR;
   Serial.println(F(" - DONE"));
 
@@ -143,11 +144,11 @@ int  LoginFTP()
 int  StatusFTP()
 {
   int ret;
-
+  
   GsmSerial.listen();
   Serial.println(F(" - StatusFTP: "));
   GsmSerial.println(F("AT+FTPSTATUS"));
-  GSMResponse(2);
+  GSM_Response(2);
 
   Serial.println(F(" - DONE"));
   ret = (strstr(TmpBuffer, ":login") > 0);
@@ -160,9 +161,9 @@ int PutFTP(const char *file, char *obuf)
 {
   int i = 0; int result = -1;
   char putcmd[100];
-
-  if (StatusFTP() != GSMOK) return GSMERROR;
   GsmSerial.listen();
+  
+  if (StatusFTP() != GSMOK) return GSMERROR;
 
   Serial.println(F(" - PutFTP: "));
 
@@ -197,7 +198,7 @@ int PutFTP(const char *file, char *obuf)
   GsmSerial.write(obuf);// The  text you want to send
   GsmSerial.write('\n');
   Serial.println(obuf);  Serial.println(strlen(obuf));
-  if (GSMResponse(1) != GSMOK) {
+  if (GSM_Response(1) != GSMOK) {
     Serial.println(F("NO RESP"));
     GSMErrors += 1000;
     return GSMERROR;
@@ -212,9 +213,10 @@ char *ReadFTP(char *filename)
 {
   int i = 0;
   char putcmd[100];
-
-  if (!StatusFTP()) return "Error";
+  
   GsmSerial.listen();
+  
+  if (!StatusFTP()) return "Error";
 
   Serial.println(F(" - GetFTP: "));
   sprintf(putcmd, "AT + FTPGET = % s, 1, 1", filename);
@@ -288,7 +290,7 @@ int GSM_AT(const __FlashStringHelper * ATCommand)
 
 ////////////////////////////////////////////////////
 
-int GSMResponse(int n)  {
+int GSM_Response(int n)  {
   long int start = millis(); long int timeout = 20000;
   char a = 0; int pcnt = 0; int i = 0;
 
@@ -320,7 +322,7 @@ int GSMResponse(int n)  {
   }
   TmpBuffer[i] = 0;
   Serial.println(F("\nEND RESP"));
-
+  
   if (pcnt < n   ||  (strstr(TmpBuffer, "Error") > 0)) {
     Serial.println(F("\nTimeout / Error response"));
 
@@ -352,9 +354,7 @@ void SendSMS(char *number, char* message)
   GsmSerial.write(message);// The SMS text you want to send
   delay(100);
   GsmSerial.write((char)26);// ASCII code of CTRL+Z
-  start = millis();
-  while ((millis() < (start + 7000)))
-    if (GsmSerial.available()) Serial.write(GsmSerial.read());
+  GSM_Response(2);
 
 }
 
@@ -399,7 +399,7 @@ int BootGSM()
   //  GsmSerial.begin(4800);
   //  delay(500);
   //  GsmSerial.flush();
- if (retry)  // boot OK
+  if (retry)  // boot OK
   {
     GSM_AT(F("ATE1"));
     GSM_AT(F("AT+CMEE=2")); // FULL DIAG

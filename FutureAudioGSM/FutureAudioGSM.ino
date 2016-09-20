@@ -153,7 +153,7 @@ void loop() // run over and over
       case 'b': BootGSM();  break;
       case 'r': Serial.println(ReadFTP("command.txt")); break;
       case 'P': ReadCodedSMS(); break;
-    case 'h': Serial.println(F("no auto loop")); autoLoop = 0;  break;
+      case 'h': Serial.println(F("no auto loop")); autoLoop = 0;  break;
       case 'R': Serial.println(ReadSMS()); Serial.println(TmpBuffer); break;
       case 'w': PowerOffGSM(); break;
       case 'S': SendSMS("3296315064", "ciao bongo");  break;
@@ -182,14 +182,14 @@ void loop() // run over and over
     }
 
     Serial.println(F("cmd# "));
-  if (autoLoop)
-    if (millis() > START_AUTO_LOOP_TIME)
-    {
-      Serial.println("Auto Loop!");
-      BootGSM();
-      ConfIPGSM(); 
-      loopAudio();
-    }
+    if (autoLoop)
+      if (millis() > START_AUTO_LOOP_TIME)
+      {
+        Serial.println("Auto Loop!");
+        BootGSM();
+        ConfIPGSM();
+        loopAudio();
+      }
   }
 
 

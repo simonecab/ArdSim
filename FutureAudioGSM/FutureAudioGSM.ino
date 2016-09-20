@@ -187,7 +187,6 @@ void loop() // run over and over
       {
         Serial.println("Auto Loop!");
         BootGSM();
-        ConfIPGSM();
         loopAudio();
       }
   }

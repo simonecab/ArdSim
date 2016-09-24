@@ -1,22 +1,24 @@
+#include "Arduino.h"
+#include "gsmsim.h"
+#include <SoftwareSerial.h>
 /////////////////////////////////////////
 // GSM/FTP DEFINITION
 /////////////////////////////////////////
 //extern SoftwareSerial GsmSerial(GSM_RX, GSM_TX); // RX, TX GSM
 
 long int GSMErrors = 0;
-
-#define GSMIGNOREERROR 1
-#define GSMERROR       2
-#define GSMOK          1
-#define GSMUNKNOWN     0
-
+#define GSM_RX    8      // CEPRI PIN 9   : NEOWAY PIN 14
+#define GSM_TX    9      // CEPRI PIN 10  : NEOWAY PIN 16
+SoftwareSerial GsmSerial(GSM_RX,GSM_TX);
+static char *ExtBuffer;
+static int BootPin=0;
 /////////////////////////////////////////
 // SETUP GSM
 /////////////////////////////////////////
 
-void SetupGSM()
+GSMSIM::GSMSIM(int BOOT_PIN, char*buffer)
 {
-
+ExtBuffer = buffer;
   //***************************************
   //SETUP GSM
   //***************************************
@@ -24,18 +26,18 @@ void SetupGSM()
   GsmSerial.begin(19200);
   //  GsmSerial.listen();
   //  GsmSerial.flush();
-  if (GSM_BOOT_PIN >= 0 )
+  if (BOOT_PIN >= 0 )
   {
-    digitalWrite(GSM_BOOT_PIN, HIGH);
-    pinMode(GSM_BOOT_PIN, OUTPUT);
+    digitalWrite(BOOT_PIN, HIGH);
+    pinMode(BOOT_PIN, OUTPUT);
   }
-
+BootPin = BOOT_PIN;
 }
 
 //////////////////////////////////////////////////////
 // CONFIGURE GSM AFTER BOOT
 ////////////////////////////////////////////////////////
-int ConfGSM()
+int GSMSIM::ConfGSM()
 {
   int retryCmd;
   int ret;
@@ -50,7 +52,7 @@ int ConfGSM()
   do {
     delay(2000);
     if ( GSM_AT(F("AT+CREG?")) != GSMOK) if ( GSM_AT(F("AT+CREG?")) != GSMOK) return GSMERROR ; // retry if timeout
-  }   while ((strstr(TmpBuffer, ",1") <= 0 ) && --retryCmd); // not registered on network
+  }   while ((strstr(ExtBuffer, ",1") <= 0 ) && --retryCmd); // not registered on network
   if (retryCmd <= 0) {
     return GSMERROR ;
   } ;
@@ -65,7 +67,7 @@ int ConfGSM()
   do {
     delay(1000);
     GSM_AT(F("AT+XIIC?"));
-  } while ((strstr(TmpBuffer, "1,") <= 0) && --retryCmd);
+  } while ((strstr(ExtBuffer, "1,") <= 0) && --retryCmd);
   if (!retryCmd) {
     return GSMERROR ;
   } ;
@@ -74,7 +76,7 @@ int ConfGSM()
   retryCmd = 20;
   do {
     GSM_AT(F("AT+CSQ"));
-  } while ((strstr(TmpBuffer, "9,9") > 0) && --retryCmd);
+  } while ((strstr(ExtBuffer, "9,9") > 0) && --retryCmd);
   if (!retryCmd) {
     return GSMERROR ;
   } ;
@@ -84,7 +86,7 @@ int ConfGSM()
   // retryCmd = 2;
   // do {
   // GsmSerial.println(F("AT+DNS=\"ftp.cabasino.com\""));
-  // if (GSMOK != GSMResponse(3)) { --retryCmg; }
+  // if (GSMOK != GSM_Response(3)) { --retryCmg; }
   // if (!retryCmd) { return GSMERROR ; } ;
   
   Serial.println(F("- DONE"));
@@ -94,32 +96,34 @@ int ConfGSM()
 
 ////////////////////////////////////////////////////
 
-int  ReadSMS()
+int  GSMSIM::ReadSMS()
 {
+	
   int ret;
   char *p, *p1;
   Serial.println(F(" - Read SMS "));
+  GsmSerial.listen();
   GSM_AT(F("AT+CSQ"));
   if ( GSM_AT(F("AT+CMGL=4")) != GSMOK) return GSMERROR;
   return GSMOK;
 }
 ////////////////////////////////////////////////////
 
-int  DeleteAllSMS()
+int  GSMSIM::DeleteAllSMS()
 {
-
+  GsmSerial.listen();
   if ( GSM_AT(F("AT+CMGD=0,4")) != GSMOK) return GSMERROR;
   return GSMOK;
 }
 
 ////////////////////////////////////////////////////
 
-int  LoginFTP()
+int  GSMSIM::LoginFTP()
 {
   int retry;
 
   GsmSerial.listen();
-  delay(2000);
+
 
   Serial.println(F(" - LoginFTP: "));
   GsmSerial.println(F("AT"));
@@ -131,7 +135,7 @@ int  LoginFTP()
   do {
 
     GsmSerial.println(F("At+ftplogin=217.64.195.210,21,cabasino.com,Catto1"));
-  } while ((GSMOK != GSMResponse(2)) && (--retry)) ;
+  } while ((GSMOK != GSM_Response(2)) && (--retry)) ;
   if (!retry) return GSMERROR;
   Serial.println(F(" - DONE"));
 
@@ -140,29 +144,29 @@ int  LoginFTP()
 
 ////////////////////////////////////////////////////
 
-int  StatusFTP()
+int  GSMSIM::StatusFTP()
 {
   int ret;
   
   GsmSerial.listen();
   Serial.println(F(" - StatusFTP: "));
   GsmSerial.println(F("AT+FTPSTATUS"));
-  GSMResponse(2);
+  GSM_Response(2);
 
   Serial.println(F(" - DONE"));
-  ret = (strstr(TmpBuffer, ":login") > 0);
+  ret = (strstr(ExtBuffer, ":login") > 0);
   if (ret) return GSMOK; else return GSMERROR;
 }
 
 ////////////////////////////////////////////////////
 
-int PutFTP(const char *file, char *obuf)
+int GSMSIM::PutFTP(const char *file, char *obuf)
 {
   int i = 0; int result = -1;
   char putcmd[100];
-
-  if (StatusFTP() != GSMOK) return GSMERROR;
   GsmSerial.listen();
+  
+  if (StatusFTP() != GSMOK) return GSMERROR;
 
   Serial.println(F(" - PutFTP: "));
 
@@ -176,7 +180,7 @@ int PutFTP(const char *file, char *obuf)
       if (GsmSerial.available())
       {
         Serial.write(a = GsmSerial.read());
-        TmpBuffer[i++] = a;
+        ExtBuffer[i++] = a;
 
         if (a == '>') {
           result = 1;
@@ -188,7 +192,7 @@ int PutFTP(const char *file, char *obuf)
     }
   }
 
-  TmpBuffer[i] = 0;
+  ExtBuffer[i] = 0;
   if (result == -1) {
     Serial.println(F(" - DONE NO PUT"));
     GSMErrors += 1000;
@@ -197,7 +201,7 @@ int PutFTP(const char *file, char *obuf)
   GsmSerial.write(obuf);// The  text you want to send
   GsmSerial.write('\n');
   Serial.println(obuf);  Serial.println(strlen(obuf));
-  if (GSMResponse(1) != GSMOK) {
+  if (GSM_Response(1) != GSMOK) {
     Serial.println(F("NO RESP"));
     GSMErrors += 1000;
     return GSMERROR;
@@ -208,13 +212,14 @@ int PutFTP(const char *file, char *obuf)
 
 ////////////////////////////////////////////////////
 
-char *ReadFTP(char *filename)
+char *GSMSIM::ReadFTP(char *filename)
 {
   int i = 0;
   char putcmd[100];
-
-  if (!StatusFTP()) return "Error";
+  
   GsmSerial.listen();
+  
+  if (!StatusFTP()) return "Error";
 
   Serial.println(F(" - GetFTP: "));
   sprintf(putcmd, "AT + FTPGET = % s, 1, 1", filename);
@@ -226,11 +231,11 @@ char *ReadFTP(char *filename)
       if (GsmSerial.available())
       {
         Serial.write(a = GsmSerial.read());
-        TmpBuffer[i++] = a;
+        ExtBuffer[i++] = a;
         if (i > 10) {
-          if (!strcmp(TmpBuffer - 3, ": OK")) start = millis() - 10000; //wait 15-10=5 sec
+          if (!strcmp(ExtBuffer - 3, ": OK")) start = millis() - 10000; //wait 15-10=5 sec
         }
-        if (i > sizeof (TmpBuffer)) {
+        if (i > sizeof (ExtBuffer)) {
           Serial.println(F("Buffer Overflow"));
           i--;
         }
@@ -238,57 +243,57 @@ char *ReadFTP(char *filename)
       }
     }
   }
-  TmpBuffer[i] = 0;
+  ExtBuffer[i] = 0;
 
-  if (strstr(TmpBuffer, ": ") <= 0) {
-    strcpy(TmpBuffer, "Error");
+  if (strstr(ExtBuffer, ": ") <= 0) {
+    strcpy(ExtBuffer, "Error");
   }
   Serial.println(F(" - DONE READ"));
 
-  return TmpBuffer;
+  return ExtBuffer;
 }
 
 ////////////////////////////////////////////////////
 
-int GSM_AT(const __FlashStringHelper * ATCommand)
+int GSMSIM::GSM_AT(const __FlashStringHelper * ATCommand)
 {
   int i = 0;
   int done = GSMUNKNOWN;
   long int start = millis();
 
-  TmpBuffer[0] = 0;
+  ExtBuffer[0] = 0;
   //Serial.println(ATCommand);
   GsmSerial.println(ATCommand);
   while ((millis() < (start + 2000)) && !done )
   {
-    if (GsmSerial.available()) TmpBuffer[i++] = GsmSerial.read();
-    if (i > 2) if (!strncmp(TmpBuffer + i - 3, "OK", 2)) done = GSMOK;
-    if (i > 5) if (!strncmp(TmpBuffer + i - 6, "ERROR", 5)) done = GSMERROR;
-    if (i > sizeof(TmpBuffer)) {
+    if (GsmSerial.available()) ExtBuffer[i++] = GsmSerial.read();
+    if (i > 2) if (!strncmp(ExtBuffer + i - 3, "OK", 2)) done = GSMOK;
+    if (i > 5) if (!strncmp(ExtBuffer + i - 6, "ERROR", 5)) done = GSMERROR;
+    if (i > sizeof(ExtBuffer)) {
       Serial.println(F("BUFFER FULL\n"));
       done = GSMERROR;
       GSMErrors++;
     }
   };
-  TmpBuffer[i] = 0;
+  ExtBuffer[i] = 0;
   if (done == GSMERROR || done == GSMUNKNOWN  )
   {
     Serial.println(F(" - GSM: "));
     if (done == GSMUNKNOWN)  Serial.println(F(" TIMEOUT, BOOT ? "));
     GSMErrors++;
   }
-  Serial.println(TmpBuffer);
+  Serial.println(ExtBuffer);
 
   start = millis();
   while (millis() < start + 50)
-    if (GsmSerial.available())
-      Serial.write(GsmSerial.read());
+     if (GsmSerial.available())
+       Serial.write(GsmSerial.read());
   return done;
 }
 
 ////////////////////////////////////////////////////
 
-int GSMResponse(int n)  {
+int GSMSIM::GSM_Response(int n)  {
   long int start = millis(); long int timeout = 20000;
   char a = 0; int pcnt = 0; int i = 0;
 
@@ -308,20 +313,20 @@ int GSMResponse(int n)  {
           timeout = 500;
         }
       }
-      TmpBuffer[i] = a;
+      ExtBuffer[i] = a;
       if (i < 199) i++;
     }
   }
 
-  if (i > sizeof(TmpBuffer)) {
+  if (i > sizeof(ExtBuffer)) {
     Serial.println(F("BUFFER FULL\n"));
     GSMErrors++;
     return GSMERROR;
   }
-  TmpBuffer[i] = 0;
+  ExtBuffer[i] = 0;
   Serial.println(F("\nEND RESP"));
   
-  if (pcnt < n   ||  (strstr(TmpBuffer, "Error") > 0)) {
+  if (pcnt < n   ||  (strstr(ExtBuffer, "Error") > 0)) {
     Serial.println(F("\nTimeout / Error response"));
 
     GSMErrors++;
@@ -333,7 +338,7 @@ int GSMResponse(int n)  {
 
 ////////////////////////////////////////////////////
 
-void SendSMS(char *number, char* message)
+void GSMSIM::SendSMS(char *number, char* message)
 {
 
   long int start;
@@ -341,26 +346,24 @@ void SendSMS(char *number, char* message)
 
   //GSM_AT(F("AT+CMGD=4[,<delflag>]
 
-  sprintf(TmpBuffer, "- SEND SMS \"%s\" TO %s:", message, number);
-  Serial.println(TmpBuffer);
+  sprintf(ExtBuffer, "- SEND SMS \"%s\" TO %s:", message, number);
+  Serial.println(ExtBuffer);
   GsmSerial.write("AT+CMGS=");
   delay(100);
-  sprintf (TmpBuffer, "\"%s\"\r", number); // quoted number
-  GsmSerial.println(TmpBuffer);
+  sprintf (ExtBuffer, "\"%s\"\r", number); // quoted number
+  GsmSerial.println(ExtBuffer);
   delay(100);
   //mySerial.println("\"+393356930892\"\r"); // Replace x with mobile number
   GsmSerial.write(message);// The SMS text you want to send
   delay(100);
   GsmSerial.write((char)26);// ASCII code of CTRL+Z
-  start = millis();
-  while ((millis() < (start + 7000)))
-    if (GsmSerial.available()) Serial.write(GsmSerial.read());
+  GSM_Response(2);
 
 }
 
 ///////////////////////////////////////////////////
 
-void PowerOffGSM()
+void GSMSIM::PowerOffGSM()
 {
   long int start;
   Serial.println(F("PowerOffGSM"));
@@ -375,24 +378,27 @@ void PowerOffGSM()
 
 ////////////////////////////////////////////////////
 
-int BootGSM()
+int GSMSIM::BootGSM()
 {
   long int start;
   int retry = 3;
 
   GsmSerial.listen();
   start = millis();
+
   while (GSM_AT(F("AT")) != GSMOK && --retry)
   {
-    if (GSM_BOOT_PIN < 0) return GSMERROR;
+    if (BootPin <= 0) return GSMERROR;
+
     Serial.println(F("BootGSM"));
     GSMErrors--;
-    digitalWrite(GSM_BOOT_PIN, LOW);
+    digitalWrite(BootPin, LOW);
     delay(700);
-    digitalWrite(GSM_BOOT_PIN, HIGH);
+    digitalWrite(BootPin, HIGH);
     while ((millis() < (start + 8000)))
       if (GsmSerial.available()) Serial.write(GsmSerial.read());
     start = millis() + 8000; // wait 16 seconds
+  
   }
 
   //  GsmSerial.println("AT+IPR=4800");
@@ -404,6 +410,7 @@ int BootGSM()
     GSM_AT(F("ATE1"));
     GSM_AT(F("AT+CMEE=2")); // FULL DIAG
     GSM_AT(F("AT+CMGF=1")); //  FOR SMS
+    // GSM_AT(F("AT+COPS?")); 0 is automatic registration, 2 is deregister
     // GSM_AT(F("AT+COPS=0")); ONLY IF SIM PROBLEM
     //  if ( GSM_AT(F("AT+CREG=1"))       != GSMOK) return GSMERROR; //allow the network registration to provide result code
     //if ( GSM_AT(F("ATE0")) != GSMOK) return GSMERROR; //set no echo
@@ -415,4 +422,20 @@ int BootGSM()
   
 }
 
+void GSMSIM::ProxyGSM()
+{ 
+    GsmSerial.listen();
+          Serial.println("<<");
+          long int start = millis();
 
+          delay(100);
+          while (Serial.available())GsmSerial.write(Serial.read());
+          while (millis() < start + 5000)
+            while (GsmSerial.available()) {
+              Serial.write(GsmSerial.read());
+            }
+          if (GsmSerial.overflow()) {
+            Serial.println("SoftwareSerial overflow!");
+          }
+          Serial.println(">>");
+}

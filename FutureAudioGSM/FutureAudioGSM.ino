@@ -1,7 +1,10 @@
+#include <gsmsim.h>
+
 
 #include <EEPROM.h>
 #include <Wire.h>
 #include <SoftwareSerial.h>
+
 
 
 // PIN POWER NEOWAY 2 e 4 CONNECTED TO ARDUINO 5V e GND congigui (2to5V  4toGND)
@@ -11,7 +14,10 @@
 #define GSM_BOOT_PIN  3       // Neoway M590 boot pin if available : CEPRI PIN 14 : NEOWAY PIN 19
 // #define GSM_BOOT_PIN  -1   // if Neoway M590 boot pin NOT available
 
+
+
 char TmpBuffer[200];
+GSMSIM GSMSIM(GSM_BOOT_PIN,TmpBuffer);
 
 /////////////////////////////////////////&
 // PIN DEFINITION
@@ -27,7 +33,7 @@ char TmpBuffer[200];
 #define GSM_BOOT_PIN  3       // Neoway M590 boot pin if available : CEPRI PIN 14 : NEOWAY PIN 19
 // #define GSM_BOOT_PIN  -1   // if Neoway M590 boot pin NOT available
 
-#define LEDPIN        13  // default arduino LED
+
 
 
 /////////////////////////////////////////
@@ -48,14 +54,7 @@ SoftwareSerial AudioSerial(AUDIO_RX, AUDIO_TX);
 
 
 
-/////////////////////////////////////////
-// GSM/FTP DEFINITION
-/////////////////////////////////////////
-SoftwareSerial GsmSerial(GSM_RX, GSM_TX); // RX, TX GSM
-#define GSMIGNOREERROR 1
-#define GSMERROR       2
-#define GSMOK          1
-#define GSMUNKNOWN     0
+
 
 
 
@@ -63,26 +62,11 @@ SoftwareSerial GsmSerial(GSM_RX, GSM_TX); // RX, TX GSM
 /////////////////////////////////////////
 // APP DEFINITION
 /////////////////////////////////////////
-#define UPDATETIMEFINAL 600     // Final update interval 
-#define UPDATETIMEINITIAL 60;   // initial update interval
-int MFile = 1; // id file multipli
-long int NextConnectionTime = 15;
-
-#define HUNKNOWN 0
-#define HERROR -1
-#define HOK 1
-#define HPERFECT 2
-int Happy = HUNKNOWN;
-
-
-
-#define BLINK_FAST 40
-#define BLINK_NORM 300
-#define BLINK_SLOW 800
-
 
 #define START_AUTO_LOOP_TIME 10000
 int autoLoop = 1;
+
+
 /////////////////////////////////////////
 // SETUP AND SELF TEST
 /////////////////////////////////////////
@@ -101,16 +85,10 @@ void setup()
   ConfAudio();
 
 
-
-
   delay(500);
   i = 0;
   TmpBuffer[0] = 0;
   TmpBuffer[1] = 0;
-
-
-
-
 
 
   //***************************************
@@ -118,23 +96,25 @@ void setup()
   //***************************************
 
   pinMode(LEDPIN, OUTPUT);
-  //blink(10, BLINK_FAST);   //blink(10, BLINK_NORM); //SECONDI DI BLINK  e VELOCITA'
-
+ 
 
   //***************************************
   //SETUP GSM
   //***************************************
-  SetupGSM();
+  GSMSIM.BootGSM();
 
   //***************************************
   //END SETUP
   //***************************************
 
-  Serial.print(F("\nAT cmd,  S(ms), c(onfIP), a(audio), l(oop), b(oot), P(rocess coded SMS),\n h(alt loop), w(poweroff), R(ead SMS), S(endSMS)\n"));
-  Serial.println(F("cmd# "));
+help();
 }
 
-
+void help()
+{
+  Serial.print(F("\n.AT cmd,  S(ms), c(onfIP), a(audio), l(oop), b(oot), P(rocess coded SMS),\n h(alt loop), w(poweroff), R(ead SMS), S(endSMS)\n"));
+  Serial.println(F("cmd# "));
+}
 void loop() // run over and over
 {
   //////////////////////////////////////////////////////
@@ -142,39 +122,24 @@ void loop() // run over and over
   //////////////////////////////////////////////////////
   if (Serial.available())
   {
-    GsmSerial.listen();
     char a = Serial.read();
     switch (a)
     {
-      case 'c': ConfGSM();  break;
-      case 's': StatusFTP();  break;
+      case 'c': GSMSIM.ConfGSM();  break;
+      case 's': GSMSIM.StatusFTP();  break;
       case 'a': Serial.println(F("play file 1")); AudioPlay(1, 0x8); break;
       case 'l': Serial.println(F("audio loop")); loopAudio(); break;
-      case 'b': BootGSM();  break;
-      case 'r': Serial.println(ReadFTP("command.txt")); break;
+      case 'b': GSMSIM.BootGSM();  break;
+      case 'r': Serial.println(GSMSIM.ReadFTP("command.txt")); break;
       case 'P': ReadCodedSMS(); break;
-    case 'h': Serial.println(F("no auto loop")); autoLoop = 0;  break;
-      case 'R': Serial.println(ReadSMS()); Serial.println(TmpBuffer); break;
-      case 'w': PowerOffGSM(); break;
-      case 'S': SendSMS("3296315064", "ciao bongo");  break;
-
-      default:
-        { Serial.println("<<");
-          long int start = millis();
-          GsmSerial.write(a);
-          delay(100);
-          while (Serial.available())GsmSerial.write(Serial.read());
-          while (millis() < start + 5000)
-            while (GsmSerial.available()) {
-              Serial.write(a = GsmSerial.read());
-            }
-          if (GsmSerial.overflow()) {
-            Serial.println("SoftwareSerial overflow!");
-          }
-          Serial.println(">>");
-
-        }
+      case 'h': Serial.println(F("no auto loop")); autoLoop = 0;  break;
+      case 'R': Serial.println(GSMSIM.ReadSMS()); Serial.println(TmpBuffer); break;
+      case 'w': GSMSIM.PowerOffGSM(); break;
+      case 'S': GSMSIM.SendSMS("3296315064", "ciao bongo");  break;
+      case 'A': GSMSIM.ProxyGSM();  break;
+      default: help();
     }
+  }
     {
       long int start = millis();
       while (millis() < start + 200)
@@ -182,18 +147,13 @@ void loop() // run over and over
     }
 
     Serial.println(F("cmd# "));
-  if (autoLoop)
-    if (millis() > START_AUTO_LOOP_TIME)
-    {
-      Serial.println("Auto Loop!");
-      BootGSM();
-      ConfIPGSM(); 
-      loopAudio();
-    }
-  }
-
-
-
+    if (autoLoop)
+      if (millis() > START_AUTO_LOOP_TIME)
+      {
+        Serial.println("Auto Loop!");
+        GSMSIM.BootGSM();
+        loopAudio();
+      }
 }//end loop
 
 
@@ -212,7 +172,7 @@ void ReadCodedSMS()
 {
   char *p;
   Serial.println(F(" - Read SMS #coded: "));
-  if (ReadSMS() != GSMOK)
+  if (GSMSIM.ReadSMS() != GSMOK)
   {
     Serial.println("\nNO SMS");
   } else {
@@ -221,17 +181,21 @@ void ReadCodedSMS()
     p = strstr(TmpBuffer, "##");
     if (p)
     {
-      if (TmpBuffer[2]  && TmpBuffer[2] >= '1' && TmpBuffer[2] <= '9')
+      if (p[2]  && p[2] >= '1' && p[2] <= '9')
       {
-        nsong = TmpBuffer[2] - '1' + 1;
+        char mess[30]="Audio=";
+        strcat(mess,p+2);
+        nsong = p[2] - '0';
         Serial.print("\n\nAUDIO=");
         Serial.println(nsong);
+        if(p[3]=='!') GSMSIM.SendSMS("3296315064", mess);
+        p[3]=0;
       } else {
         Serial.println("No change");
       }
     }
   }
-  DeleteAllSMS();
+  GSMSIM.DeleteAllSMS();
   TmpBuffer[0] = 0;
 }
 
@@ -241,6 +205,7 @@ void loopAudio()
   {
     sendCommand(CMD_PLAY_W_VOL, 0x1500 + nsong );//play the n song with volume
     delay(29000);
+    GSMSIM.BootGSM();
     ReadCodedSMS();
   }
 }
@@ -252,9 +217,7 @@ void loopAudio()
 
 void AudioPlay(unsigned int file, unsigned int vol)
 {
-
   sendCommand(CMD_PLAY_W_VOL, (vol << 8) + file);
-
 }
 
 void ConfAudio()

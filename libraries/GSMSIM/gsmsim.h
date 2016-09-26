@@ -8,8 +8,10 @@
 #include "Arduino.h"
 extern long int GSMErrors;
 
+#define EXTBUFFERSIZE  200
 #define GSMIGNOREERROR 1
 #define GSMERROR       2
+#define GSMFATAL       3
 #define GSMOK          1
 #define GSMUNKNOWN     0
 
@@ -22,7 +24,7 @@ extern long int GSMErrors;
 class GSMSIM
 {
 public:
-GSMSIM(int BOOT, char *TmpBuffer);
+GSMSIM(int BOOT, char *TmpBuffer, int TmpBuffersize);
 void SetupGSM();
 int  ConfGSM();
 int  ReadSMS();

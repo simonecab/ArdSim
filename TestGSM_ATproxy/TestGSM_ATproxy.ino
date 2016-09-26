@@ -19,9 +19,9 @@ void setup()
   prova(38400L);
   prova(57600L);
   prova(115200L);
-
-  prova(19200L);
-    prova(9600L);
+  prova(38400L);
+//  prova(19200L);
+//    prova(9600L);
 // AT+IPR=<baud rate>
 
 

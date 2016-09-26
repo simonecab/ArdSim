@@ -17,7 +17,7 @@
 
 
 char TmpBuffer[200];
-GSMSIM GSMSIM(GSM_BOOT_PIN,TmpBuffer);
+GSMSIM GSMSIM(GSM_BOOT_PIN, TmpBuffer, sizeof(TmpBuffer));
 
 /////////////////////////////////////////&
 // PIN DEFINITION
@@ -96,7 +96,7 @@ void setup()
   //***************************************
 
   pinMode(LEDPIN, OUTPUT);
- 
+
 
   //***************************************
   //SETUP GSM
@@ -107,7 +107,7 @@ void setup()
   //END SETUP
   //***************************************
 
-help();
+  help();
 }
 
 void help()
@@ -136,30 +136,25 @@ void loop() // run over and over
       case 'R': Serial.println(GSMSIM.ReadSMS()); Serial.println(TmpBuffer); break;
       case 'w': GSMSIM.PowerOffGSM(); break;
       case 'S': GSMSIM.SendSMS("3296315064", "ciao bongo");  break;
-      case 'A': GSMSIM.ProxyGSM();  break;
+      case '.': GSMSIM.ProxyGSM();  break;
       default: help();
     }
-  }
     {
       long int start = millis();
       while (millis() < start + 200)
         if (Serial.available()) Serial.read();
     }
-
     Serial.println(F("cmd# "));
-    if (autoLoop)
-      if (millis() > START_AUTO_LOOP_TIME)
-      {
-        Serial.println("Auto Loop!");
-        GSMSIM.BootGSM();
-        loopAudio();
-      }
+  }
+
+  if (autoLoop)
+    if (millis() > START_AUTO_LOOP_TIME)
+    {
+      Serial.println("Auto Loop!");
+      GSMSIM.BootGSM();
+      loopAudio();
+    }
 }//end loop
-
-
-
-
-
 
 
 
@@ -183,13 +178,13 @@ void ReadCodedSMS()
     {
       if (p[2]  && p[2] >= '1' && p[2] <= '9')
       {
-        char mess[30]="Audio=";
-        strcat(mess,p+2);
+        char mess[30] = "Audio=";
+        strcat(mess, p + 2);
         nsong = p[2] - '0';
         Serial.print("\n\nAUDIO=");
         Serial.println(nsong);
-        if(p[3]=='!') GSMSIM.SendSMS("3296315064", mess);
-        p[3]=0;
+        if (p[3] == '!') GSMSIM.SendSMS("3296315064", mess);
+        p[3] = 0;
       } else {
         Serial.println("No change");
       }

@@ -1,6 +1,5 @@
 #include <gsmsim.h>
 
-
 #include <EEPROM.h>
 #include <Wire.h>
 #include <SoftwareSerial.h>
@@ -17,7 +16,7 @@
 
 
 char TmpBuffer[200];
-GSMSIM GSMSIM(GSM_BOOT_PIN, TmpBuffer, sizeof(TmpBuffer));
+GSMSIM GSMSIM(GSM_BOOT_PIN, TmpBuffer, sizeof(TmpBuffer), GSM_RX, GSM_TX);
 
 /////////////////////////////////////////&
 // PIN DEFINITION

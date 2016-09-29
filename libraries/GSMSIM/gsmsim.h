@@ -23,8 +23,9 @@ extern long int GSMErrors;
 /////////////////////////////////////////
 class GSMSIM
 {
+  SoftwareSerial m_gsmSerial;
 public:
-GSMSIM(int BOOT, char *TmpBuffer, int TmpBuffersize);
+GSMSIM(int BOOT, char *TmpBuffer, int TmpBuffersize, int rx, int tx);
 void SetupGSM();
 int  ConfGSM();
 int  ReadSMS();
@@ -37,7 +38,6 @@ void SendSMS(char *number, char* message);
 void PowerOffGSM();
 int  BootGSM();
 void ProxyGSM();
-
 private:
 
 int GSM_AT(const __FlashStringHelper * ATCommand);

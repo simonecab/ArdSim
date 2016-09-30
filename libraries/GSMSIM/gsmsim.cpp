@@ -57,6 +57,8 @@ int GSMSIM::ConfGSM()
 	do {
 		delay(2000);
 		if ( GSM_AT(F("AT+CREG?")) != GSMOK) return GSMERROR ;
+		if(strstr(ExtBuffer, "0,0")	){ Serial.println(F("Fatal: No registration")); return GSMERROR ; }
+
 	}   while ((strstr(ExtBuffer, ",1") <= 0 ) && --retryCmd); // not registered on network
 	if (retryCmd <= 0) {
 		return GSMERROR ;

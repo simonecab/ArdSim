@@ -1,3 +1,5 @@
+#include <gsmsim.h>
+
 
 #include <EEPROM.h>
 #include <Wire.h>
@@ -78,17 +80,12 @@ TinyGPS Gps;
 
 
 /////////////////////////////////////////
-// GSM/FTP DEFINITION
+// GSM/FTP DEFINITION AND SETUP
 /////////////////////////////////////////
-SoftwareSerial GsmSerial(GSM_RX, GSM_TX); // RX, TX GSM
+GSMSIM GSMSIM(GSM_BOOT_PIN, TmpBuffer, sizeof(TmpBuffer), GSM_RX, GSM_TX);
+
+//SoftwareSerial GsmSerial(GSM_RX, GSM_TX); // RX, TX GSM
 //AltSoftSerial GsmSerial;
-
-extern long int GSMErrors;
-
-#define GSMIGNOREERROR 1
-#define GSMERROR       2
-#define GSMOK          1
-#define GSMUNKNOWN     0
 
 
 
@@ -176,11 +173,6 @@ void setup()
   //blink(10, BLINK_FAST);   //blink(10, BLINK_NORM); //SECONDI DI BLINK  e VELOCITA'
 
 
-  //***************************************
-  //SETUP GSM
-  //***************************************
-  SetupGSM();
-
   
   //***************************************
   //SETUP I2C SENSORS
@@ -209,7 +201,7 @@ void setup()
 }
 void printHelp()
 {
-  Serial.print(F("\nAT cmd, h(alt), a(udio), p(ut), l(ogin), g(ps_status)\nr(eadFtp), b(oot), c(onf_gsm), s(tatus), t(est), R(ead), S(end)\n"));
+  Serial.print(F("\n.AT cmd, h(alt), a(udio), p(ut), l(ogin), g(ps_status)\nr(eadFtp), b(oot), c(onf_gsm), s(tatus), t(est), R(ead), S(end)\n"));
   Serial.println(F("cmd# "));
 }
 
@@ -235,37 +227,26 @@ void loop() // run over and over
   //////////////////////////////////////////////////////
   if (Serial.available())
   {
-    GsmSerial.listen();
     char a = Serial.read();
     switch (a)
     {
       case 'p': PutFTPGps(GSMOK);  break;
-      case 'l': LoginFTP();  break;
-      case 'c': ConfGSM();  break;
-      case 's': StatusFTP();  break;
+      case 'l': GSMSIM.LoginFTP();  break;
+      case 'c': GSMSIM.ConfGSM();  break;
+      case 's': GSMSIM.StatusFTP();  break;
       case 'a': Serial.println(F("play file 2")); AudioPlay(2, 0x8); break;
-      case 'b': BootGSM();  break;
+      case 'b': GSMSIM.BootGSM();  break;
       case 'g': PutFTPGps(GSMUNKNOWN);  break;
       case 'h': Serial.println(F("send ogni ora")); printHelp(); NextConnectionTime = 3600000; ReduceLed = 1; break;
-      case 'r': Serial.println(ReadFTP("command.txt")); break;
-      case 'R': Serial.println(ReadSMS());Serial.println(TmpBuffer); break;
+      case 'r': Serial.println(GSMSIM.ReadFTP("command.txt")); break;
+      case 'R': Serial.println(GSMSIM.ReadSMS());Serial.println(TmpBuffer); break;
       case 't': TestSensors(); break;
-      case 'S': SendSMS("3296315064", "ciao bongo");  break;
+      case 'S': GSMSIM.SendSMS("3296315064", "ciao bongo");  break;
+      case '.': GSMSIM.ProxyGSM();  break;
 
-      default:
-        { Serial.println("<<");
-          long int start = millis();
-          GsmSerial.write(a);
-          delay(100);
-          while (Serial.available())GsmSerial.write(Serial.read());
-          while (millis() < start + 5000)
-            while (GsmSerial.available()) {
+      default: printHelp(); 
+        
 
-              Serial.write(a = GsmSerial.read());
-            }
-          Serial.println(">>");
-          GpsSerial.listen();
-        }
     }
     {
       long int start = millis();
@@ -299,20 +280,20 @@ void loop() // run over and over
     Happy = HUNKNOWN;
     colorWipe(LedStrip.Color(255, 255, 255), 50); // white
     blink(2, BLINK_FAST);
-    if ( BootGSM() != GSMOK) {
+    if ( GSMSIM.BootGSM() != GSMOK) {
       Happy = HERROR;
       return;
     }
-    if ( ConfGSM() != GSMOK) {
+    if ( GSMSIM.ConfGSM() != GSMOK) {
       Happy = HERROR;
-      PowerOffGSM();
+      GSMSIM.PowerOffGSM();
       NextConnectionTime = (millis() / 1000) + UPDATETIMEINITIAL;
       return;
     }
     colorWipe(LedStrip.Color(255, 0, 255), 50); // Blue
-    if ( LoginFTP() != GSMOK) {
+    if ( GSMSIM.LoginFTP() != GSMOK) {
       Happy = HERROR;
-      PowerOffGSM();
+      GSMSIM.PowerOffGSM();
       NextConnectionTime = (millis() / 1000) + UPDATETIMEINITIAL;
       return;
     }
@@ -320,13 +301,13 @@ void loop() // run over and over
     colorWipe(LedStrip.Color(0, 0, 255), 50); // Blue
     if ( PutFTPGps(1) != GSMOK) {
       Happy = HERROR;
-      PowerOffGSM();
+      GSMSIM.PowerOffGSM();
       NextConnectionTime = (millis() / 1000) + UPDATETIMEINITIAL;
       return;
     }
     AudioPlay(2, 0x4);
     Happy = HPERFECT;
-    PowerOffGSM();
+    GSMSIM.PowerOffGSM();
     Serial.print("Now: "); Serial.print(millis() / 1000); Serial.print(" next "); Serial.println(NextConnectionTime);
 
     Serial.println(F("cmd# "));
@@ -411,7 +392,7 @@ int PutFTPGps(int transmit)
   sprintf(text, "< S = %3d/%4d %9ld %9ld %9ld V3=%04d E=%ld >", gpsSat, gpsHdop, lat, lon, gpsTime + 2000000, Volt, GSMErrors  );
   sprintf(file, "test%04d.txt", MFile++);
 if(transmit)
-  return PutFTP( file, text);
+  return GSMSIM.PutFTP( file, text);
   else
   return GSMOK;
 }

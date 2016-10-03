@@ -18,9 +18,9 @@ char TmpBuffer[200];
 
 // PIN POWER NEOWAY 2 e 4 CONNECTED TO ARDUINO 5V e GND congigui (2to5V  4toGND)
 // PIN POWER CEPRI  4 e 2 CONNECTED TO ARDUINO 5V e GND congigui (2toGND 4toVCC)
-#define GSM_RX    8      // CEPRI PIN 9   : NEOWAY PIN 14
-#define GSM_TX    9      // CEPRI PIN 10  : NEOWAY PIN 16
-#define GSM_BOOT_PIN  3       // Neoway M590 boot pin if available : CEPRI PIN 14 : NEOWAY PIN 19
+#define GSM_RX    8      // CEPRI PIN 9   : NEOWAY PIN 14  : ITRUKG  PIN T
+#define GSM_TX    9      // CEPRI PIN 10  : NEOWAY PIN 16  : ITRUKG  PIN R
+#define GSM_BOOT_PIN  3       // Neoway M590 boot pin if available : CEPRI PIN 14 : NEOWAY PIN 19 : ITRUKG  PIN K
 // #define GSM_BOOT_PIN  -1   // if Neoway M590 boot pin NOT available
 
 #define LEDSTRIPPIN   5   // RGB LED Strip

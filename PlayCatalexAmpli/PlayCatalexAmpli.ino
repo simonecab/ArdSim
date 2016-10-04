@@ -1,4 +1,4 @@
-#include <BY8X01-16P.h>
+#include <BY8001.h>
 
 // BY8001 MP3 Player Library, Example Program 1; Sequential Playback Demo 
 // Date: June 2015
@@ -22,7 +22,7 @@
 //
 
 #include <SoftwareSerial.h>
-//#include <BY8001.h>
+#include <BY8001.h>
 
 // function prototype
 bool checkFor_mp3IsStopped();
@@ -51,6 +51,7 @@ void setup(){
   word numOfTracksTF = mp3.getNumberOfTracksTF();
   Serial.print("\nNumber of files on micro SD-card: "); Serial.println(numOfTracksTF);
   mp3.stopPlayback();
+  
 
 }
 
@@ -69,7 +70,7 @@ void loop(){
   elapsedTime = mp3.getElapsedTrackPlaybackTime();
   playback = totalTime - elapsedTime;
   Serial.print(playback); Serial.print(",");
-//  if(millis()>15000) while (1);
+ if(millis()>15000) while (1);
 }
 
 // check for if Mp3 Player is stopped

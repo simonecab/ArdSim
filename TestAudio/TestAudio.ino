@@ -44,13 +44,13 @@ void setup()
   delay(200);//wait for 200ms
   sendCommand(CMD_DAC, 0X00);//start DAC
     delay(2000);//wait for 200ms
-  sendCommand(CMD_PLAY_W_VOL, 0X1f01);//play the first song with volume 15 class
+  sendCommand(CMD_PLAY_W_VOL, 0X0f01);//play the first song with volume 15 class
   delay(5000); 
 
-  sendCommand(CMD_PLAY_W_VOL, 0X1402);//play the first song with volume 15 class
+  sendCommand(CMD_PLAY_W_VOL, 0X0f02);//play the first song with volume 15 class
   delay(5000);//wait for 200ms
 
-  sendCommand(CMD_PLAY_W_VOL, 0X1403);//play the first song with volume 15 class
+  sendCommand(CMD_PLAY_W_VOL, 0X0f03);//play the first song with volume 15 class
  
   delay(5000);//wait for 200ms
     sendCommand(CMD_DAC, 0X01);//stop DAC

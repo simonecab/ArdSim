@@ -44,20 +44,29 @@ void setup()
   delay(200);//wait for 200ms
   sendCommand(CMD_DAC, 0X00);//start DAC
     delay(2000);//wait for 200ms
-  sendCommand(CMD_PLAY_W_VOL, 0X0f01);//play the first song with volume 15 class
+  sendCommand(CMD_PLAY_W_VOL, 0X1501);//play the first song with volume 15 class
   delay(5000); 
 
-  sendCommand(CMD_PLAY_W_VOL, 0X0f02);//play the first song with volume 15 class
+  sendCommand(CMD_PLAY_W_VOL, 0X1502);//play the first song with volume 15 class
   delay(5000);//wait for 200ms
 
-  sendCommand(CMD_PLAY_W_VOL, 0X0f03);//play the first song with volume 15 class
+  sendCommand(CMD_PLAY_W_VOL, 0X1503);//play the first song with volume 15 class
  
   delay(5000);//wait for 200ms
     sendCommand(CMD_DAC, 0X01);//stop DAC
 }
+int vol=0x15;
 void loop()
 { 
-
+ 
+    
+  if (Serial.available())
+  {
+    char a = Serial.read();
+    if(a>='0' && a <='9')   sendCommand(CMD_PLAY_W_VOL, (vol<<8) + a-'0');//play the n
+    if(a=='M')   vol=0x1F;
+    if(a=='m')   vol=0x8;
+}
 }
 
 void sendCommand(int8_t command, int16_t dat)

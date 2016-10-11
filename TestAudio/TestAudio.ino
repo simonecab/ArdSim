@@ -54,6 +54,11 @@ void setup()
  
   delay(5000);//wait for 200ms
     sendCommand(CMD_DAC, 0X01);//stop DAC
+         delay(200);//wait for 200ms
+  sendCommand(CMD_DAC, 0X00);//start DAC
+      Serial.println("insert track number 1-9 or a letter a-z for volume control (a min z max");
+
+    delay(2000);//wait for 200ms
 }
 int vol=0x15;
 void loop()
@@ -62,10 +67,11 @@ void loop()
     
   if (Serial.available())
   {
+    delay(2000);//wait for 200ms
     char a = Serial.read();
     if(a>='0' && a <='9')   sendCommand(CMD_PLAY_W_VOL, (vol<<8) + a-'0');//play the n
-    if(a=='M')   vol=0x1F;
-    if(a=='m')   vol=0x8;
+    if(a>='a' && a <='z')   vol= 30+(a-'z') ;
+
 }
 }
 

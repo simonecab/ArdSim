@@ -36,6 +36,10 @@ SoftwareSerial AudioSerial(AUDIO_RX, AUDIO_TX);
 #define CMD_PLAY_W_INDEX 0X03
 #define CMD_SET_VOLUME 0X06
 #define CMD_SEL_DEV 0X09
+//#define CMD_SLEEP 0X07
+#define CMD_SLEEP 0X0A
+#define CMD_WAKE 0X0B
+#define CMD_RESET 0X0C
 #define DEV_TF 0X02
 #define CMD_PLAY 0X0D
 #define CMD_PAUSE 0X0E
@@ -43,6 +47,11 @@ SoftwareSerial AudioSerial(AUDIO_RX, AUDIO_TX);
 #define SINGLE_CYCLE_ON 0X00
 #define SINGLE_CYCLE_OFF 0X01
 #define CMD_PLAY_W_VOL 0X22
+#define CMD_DAC 0X1A
+#define DAC_STOP 0x1
+#define DAC_START 0x0
+
+
 
 /////////////////////////////////////////
 // SENSORS INCLUDE AND DEFINITIONS
@@ -234,7 +243,7 @@ void loop() // run over and over
       case 'l': GSMSIM.LoginFTP();  break;
       case 'c': GSMSIM.ConfGSM();  break;
       case 's': GSMSIM.StatusFTP();  break;
-      case 'a': Serial.println(F("play file 2")); AudioPlay(2, 0x8); break;
+      case 'a': Serial.println(F("play file 2")); AudioPlay(2, 18); break;
       case 'b': GSMSIM.BootGSM();  break;
       case 'g': PutFTPGps(GSMUNKNOWN);  break;
       case 'h': Serial.println(F("send ogni ora")); printHelp(); NextConnectionTime = 3600000; ReduceLed = 1; break;
@@ -305,7 +314,7 @@ void loop() // run over and over
       NextConnectionTime = (millis() / 1000) + UPDATETIMEINITIAL;
       return;
     }
-    AudioPlay(2, 0x4);
+    AudioPlay(2, 15);
     Happy = HPERFECT;
     GSMSIM.PowerOffGSM();
     Serial.print("Now: "); Serial.print(millis() / 1000); Serial.print(" next "); Serial.println(NextConnectionTime);

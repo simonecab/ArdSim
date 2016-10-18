@@ -12,9 +12,14 @@ void AudioPlay(unsigned int file, unsigned int vol)
 void ConfAudio()
 {
   delay(500);//Wait chip initialization is complete
+  sendCommand(CMD_RESET, 0);//chip reset
+  delay(400);//wait for 200ms
   sendCommand(CMD_SEL_DEV, DEV_TF);//select the TF card
   delay(200);//wait for 200ms
-}
+  sendCommand(CMD_DAC, DAC_START);//start DAC
+  delay(200);//wait for 200ms
+
+ }
 
 
 void sendCommand(int8_t command, int16_t dat)

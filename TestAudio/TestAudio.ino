@@ -46,16 +46,16 @@ void setup()
   delay(200);//wait for 200ms
   sendCommand(CMD_DAC, DAC_START);//start DAC
   delay(2000);//wait for 200ms
-  sendCommand(CMD_PLAY_W_VOL, 0X1501);//play the first song with volume 15 class
+  sendCommand(CMD_PLAY_W_VOL, 0X1001);//play the first song with volume 15 class
   delay(3000);
 
-  sendCommand(CMD_PLAY_W_VOL, 0X1502);//play the first song with volume 15 class
+  sendCommand(CMD_PLAY_W_VOL, 0X1002);//play the first song with volume 15 class
   delay(3000);//wait for 200ms
 
-  sendCommand(CMD_PLAY_W_VOL, 0X1503);//play the first song with volume 15 class
+  sendCommand(CMD_PLAY_W_VOL, 0X1003);//play the first song with volume 15 class
 
   delay(3000);//wait for 200ms
-  Serial.println("insert track number 1-9 or a letter a-z for volume control (a min z max), S=sleep, W=wake");
+  Serial.println("insert track number 1-9 or a letter a-z for volume control (a min z max), R=reset, S=sleep, W=wake");
 }
 int vol = 0x15;
 void loop()
@@ -76,32 +76,41 @@ void loop()
   if (Serial.available())
   {
     char a = Serial.read();
+    if (a == 'R')
+    {
+      //   sendCommand(CMD_DAC, DAC_START);
+      //  Wake();
+      //       sendCommand(CMD_WAKE, NULL);
+      sendCommand(CMD_RESET, 0);
+    }
     if (a == 'W')
     {
-    //   sendCommand(CMD_DAC, DAC_START);
-    //  Wake();
-     //       sendCommand(CMD_WAKE, NULL);
-    sendCommand(CMD_RESET, 0);
+      Wake();
+        sendCommand(CMD_DAC, DAC_START);//start DAC
     }
-    if (a == 'S')
-    {
-      //       sendCommand(CMD_DAC, DAC_STOP);
- //     sendCommand(CMD_SLEEP, NULL);
-//      sendCommand(CMD_DAC, DAC_STOP);
-      Sleep();
-    }
-    if (a >= '0' && a <= '9')
-    {
+    // sendCommand(CMD_WAKE, NULL);
+    //  sendCommand(CMD_RESET, 0);
+
+  if (a == 'S')
+  {
+    //       sendCommand(CMD_DAC, DAC_STOP);
+    //     sendCommand(CMD_SLEEP, NULL);
+    //      sendCommand(CMD_DAC, DAC_STOP);
+    Sleep();
+  }
+  
+  if (a >= '0' && a <= '9')
+  {
 
 
-      sendCommand(CMD_PLAY_W_VOL, (vol << 8) + a - '0');
-      delay(3000);
-      //          sendCommand(CMD_DAC, DAC_STOP);
-
-    }
-    if (a >= 'a' && a <= 'z')   vol = 30 + (a - 'z') ;
+    sendCommand(CMD_PLAY_W_VOL, (vol << 8) + a - '0');
+    delay(3000);
+    //          sendCommand(CMD_DAC, DAC_STOP);
 
   }
+  if (a >= 'a' && a <= 'z')   vol = 30 + (a - 'z') ;
+
+}
 }
 
 
@@ -120,16 +129,30 @@ void Sleep()
   mySerial.write((unsigned char )0xFE) ;
   mySerial.write((unsigned char )0xF1) ;
   mySerial.write((unsigned char )0xEF) ;
-  Serial.print((unsigned char )0x7E,HEX) ;
-  Serial.print((unsigned char )0xFF,HEX) ;
-  Serial.print((unsigned char )0x06,HEX) ;
-  Serial.print((unsigned char )0x0A,HEX) ;
-  Serial.print((unsigned char )0x00,HEX) ;
-  Serial.print((unsigned char )0x00,HEX) ;
-  Serial.print((unsigned char )0x00,HEX) ;
-  Serial.print((unsigned char )0xFE,HEX) ;
-  Serial.print((unsigned char )0xF1,HEX) ;
-  Serial.println((unsigned char )0xEF,HEX) ;
+  Serial.print((unsigned char )0x7E, HEX) ;
+  Serial.print((unsigned char )0xFF, HEX) ;
+  Serial.print((unsigned char )0x06, HEX) ;
+  Serial.print((unsigned char )0x0A, HEX) ;
+  Serial.print((unsigned char )0x00, HEX) ;
+  Serial.print((unsigned char )0x00, HEX) ;
+  Serial.print((unsigned char )0x00, HEX) ;
+  Serial.print((unsigned char )0xFE, HEX) ;
+  Serial.print((unsigned char )0xF1, HEX) ;
+  Serial.println((unsigned char )0xEF, HEX) ;
+  delay(400);
+  if (mySerial.available())
+  {
+    Serial.print("\nR< ");
+    {
+      long int start = millis();
+      while (millis() < start + 500)
+        if (mySerial.available()) {
+          Serial.print ((int)mySerial.read(), HEX);
+          Serial.print (" ");
+        }
+    }
+    Serial.println(">");
+  }
 }
 
 
@@ -147,16 +170,30 @@ void Wake()
   mySerial.write((unsigned char )0xFE) ;
   mySerial.write((unsigned char )0xF0) ;
   mySerial.write((unsigned char )0xEF) ;
-  Serial.print((unsigned char )0x7E,HEX) ;
-  Serial.print((unsigned char )0xFF,HEX) ;
-  Serial.print((unsigned char )0x06,HEX) ;
-  Serial.print((unsigned char )0x0B,HEX) ;
-  Serial.print((unsigned char )0x00,HEX) ;
-  Serial.print((unsigned char )0x00,HEX) ;
-  Serial.print((unsigned char )0x00,HEX) ;
-  Serial.print((unsigned char )0xFE,HEX) ;
-  Serial.print((unsigned char )0xF0,HEX) ;
-  Serial.println((unsigned char )0xEF,HEX) ;
+  Serial.print((unsigned char )0x7E, HEX) ;
+  Serial.print((unsigned char )0xFF, HEX) ;
+  Serial.print((unsigned char )0x06, HEX) ;
+  Serial.print((unsigned char )0x0B, HEX) ;
+  Serial.print((unsigned char )0x00, HEX) ;
+  Serial.print((unsigned char )0x00, HEX) ;
+  Serial.print((unsigned char )0x00, HEX) ;
+  Serial.print((unsigned char )0xFE, HEX) ;
+  Serial.print((unsigned char )0xF0, HEX) ;
+  Serial.println((unsigned char )0xEF, HEX) ;
+  delay(400);
+  if (mySerial.available())
+  {
+    Serial.print("\nR< ");
+    {
+      long int start = millis();
+      while (millis() < start + 500)
+        if (mySerial.available()) {
+          Serial.print ((int)mySerial.read(), HEX);
+          Serial.print (" ");
+        }
+    }
+    Serial.println(">");
+  }
 }
 
 

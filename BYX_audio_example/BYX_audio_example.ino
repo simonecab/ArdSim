@@ -4,7 +4,7 @@
 // FURTHER INFO https://github.com/NachtRaveVL/BY8X01-16P-Arduino
 
 #define ARDUINO_RX 4//connect to TX of the module (OR NOT CONNECTED)
-#define ARDUINO_TX 13//should connect to RX of the Serial MP3 Player module
+#define ARDUINO_TX 12//should connect to RX of the Serial MP3 Player module
 
 SoftwareSerial mySerial(ARDUINO_RX, ARDUINO_TX);
 BY8X0116P audioController(mySerial);          // Library using default Serial1 UART and no busy pin hookup

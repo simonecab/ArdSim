@@ -137,7 +137,7 @@ void setup()
   pinMode(AUDIO_RX, INPUT);
   AudioSerial.begin(9600);
   ConfAudio();
-  AudioPlay(1, 0x15); // file 1 , level
+  AudioPlay(1, 0x12); // file 1 , level
 
   //***************************************
   //SETUP AND TEST GPS
@@ -314,7 +314,7 @@ void loop() // run over and over
       NextConnectionTime = (millis() / 1000) + UPDATETIMEINITIAL;
       return;
     }
-    AudioPlay(2, 15);
+    AudioPlay(2, 8);
     Happy = HPERFECT;
     GSMSIM.PowerOffGSM();
     Serial.print("Now: "); Serial.print(millis() / 1000); Serial.print(" next "); Serial.println(NextConnectionTime);

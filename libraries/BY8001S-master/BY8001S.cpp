@@ -204,7 +204,7 @@ byte BY8001S::getLoopPlaybackMode(){
 
 char* BY8001S::getFirmwareVersion(){
   sendCommand(0x14);
-  rxFunc(40); //was 4
+  rxFunc(4); 
   String versionReturned = receiveBuffer;
   char * fwVersion = new char[5];
   versionReturned = versionReturned.substring(0,4);

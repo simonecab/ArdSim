@@ -11,6 +11,7 @@
 long int GSMErrors = 0;
 #define GSM_RX    8      // CEPRI PIN 9   : NEOWAY PIN 14
 #define GSM_TX    9      // CEPRI PIN 10  : NEOWAY PIN 16
+#define GSM_BAUDRATE 19200
 // SoftwareSerial GsmSerial(GSM_RX,GSM_TX);
 static char *ExtBuffer;
 static int BootPin=0;
@@ -28,9 +29,6 @@ GSMSIM::GSMSIM(int BOOT_PIN, char*buffer, int ExtBufferSize, int rx, int tx)
 	//SETUP GSM
 	//***************************************
 
-	m_gsmSerial.begin(19200);
-	//  GsmSerial.listen();
-	//  GsmSerial.flush();
 	if (BOOT_PIN >= 0 )
 	{
 		digitalWrite(BOOT_PIN, HIGH);
@@ -270,7 +268,7 @@ int GSMSIM::GSM_AT(const __FlashStringHelper * ATCommand)
 	ExtBuffer[0] = 0;
 	//Serial.println(ATCommand);
 	m_gsmSerial.println(ATCommand);
-	while ((millis() < (start + 3000)) && !done )
+	while ((millis() < (start + 3000)) && (done==GSMUNKNOWN)) 
 	{
 		if (m_gsmSerial.available()) ExtBuffer[i++] = m_gsmSerial.read();
 		if (i > 2) if (!strncmp(ExtBuffer + i - 3, "OK", 2)) done = GSMOK;
@@ -385,7 +383,7 @@ int GSMSIM::BootGSM()
 {
 	long int start;
 	int retry = 3;
-
+	m_gsmSerial.begin(GSM_BAUDRATE);
 	m_gsmSerial.listen();
 	start = millis();
 

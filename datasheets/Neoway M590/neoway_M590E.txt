@@ -1,0 +1,33 @@
+
+// WORKING WITH NEOWAY590
+// PIN NEOWAY 2 e 4 CONNECTED TO ARDUINO 5V e GND congigui (2to5V  4toGND)
+// PIN NEOWAY tx/rx 14 e 16 CONNECTED TO ARDUINO 10 e 11 (14to10 16to11)
+// NEOWAY PATCH boot 19--(gnd_arduino o pin3 )
+
+//CEPRI NEOWAY PATCH PWR 2--GND   4--VCC
+//CEPRI NEOWAY PATCH tx/rx 9--(10_arduino)  10--(11_arduino)
+//CEPRI NEOWAY PATCH boot 14--(gnd_arduino o pin3 )
+
+//CEPRI NEOWAY PWR 2--GND   4--VCC
+//CEPRI NEOWAY tx/rx 10--(7_arduino)  11--(8_arduino)
+//CEPRI NEOWAY boot 14--(gnd_arduino o pin3 )
+
+
+AT+CMGF=1 //Set modem to text mode
+AT+CSCS="GSM" //Set modem character set to ‘GSM’
+
+AT+CMGS="+2348034445555"
+> ajhjkfgjskf
+<Ctrl + Z> or ascii 26
+
+
+CONNECT TO A WEBSITE/SERVER
+AT+XISP=0 //Select the internal protocol stack of the modem
+AT+CGDCONT=1,"IP","ibox.tim.it"  //Set GPRS context
+AT+XGAUTH=1,1,"",""
+AT+XIIC=1 //Establish PPP link
+AT+XIIC? //Check state of PPP link and ip address
+AT+DNS="WWW.GOOGLE.COM"
+
+// sets up a TCP link to a given port on a server at a given IP address.
+AT+TCPSETUP=0,154.183.129.22,6000

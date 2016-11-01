@@ -4,7 +4,7 @@
 #include <EEPROM.h>
 #include <Wire.h>
 #include <SoftwareSerial.h>
-
+//#include <AltSoftSerial.h>
 char TmpBuffer[200];
 
 /////////////////////////////////////////
@@ -93,10 +93,11 @@ TinyGPS Gps;
 // GSM/FTP DEFINITION AND SETUP
 /////////////////////////////////////////
 SoftwareSerial GsmSerial(GSM_RX, GSM_TX); // RX, TX GSM
+//AltSoftSerial GsmSerial;
 GSMSIM GSMSIM(GSM_BOOT_PIN, TmpBuffer, sizeof(TmpBuffer),  GsmSerial);
 
 
-//AltSoftSerial GsmSerial;
+
 
 
 
@@ -131,7 +132,10 @@ void setup()
 {
   int i;
   Serial.begin(9600);
-
+  
+  //***************************************
+  //SETUP GSM
+  //***************************************
   GsmSerial.begin(19200);
 
   //***************************************

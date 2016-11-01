@@ -326,7 +326,7 @@ int GSMSIM::GSM_Response(int n)  {
 	char a = 0; int pcnt = 0; int i = 0;
 
 	Serial.print (n); Serial.println(F(" RESP : "));
-	//if (m_gsmSerial.overflow())      Serial.println("OVERFLOWWWWWW\n");
+	//if (m_gsmSerial.overflow())      Serial.println(F("OVERFLOWWWWWW\n");
 	while (millis() < start + timeout)
 	{
 		if (m_gsmSerial.available())
@@ -430,6 +430,7 @@ int GSMSIM::BootGSM()
 		digitalWrite(BootPin, LOW);
 		delay(700);
 		digitalWrite(BootPin, HIGH);
+
 		while (((millis() < (start + 8000))&& !strstr(ExtBuffer, "STARTUP")) )
 		{
 			if (m_gsmSerial.available()){
@@ -463,7 +464,7 @@ int GSMSIM::BootGSM()
 void GSMSIM::ProxyGSM()
 { 
 	//m_gsmSerial.listen();
-	Serial.println("<<");
+	Serial.println(F("<<"));
 	long int start = millis();
 
 	delay(100);
@@ -475,5 +476,5 @@ void GSMSIM::ProxyGSM()
 //	if (m_gsmSerial.overflow()) {
 //		Serial.println("SoftwareSerial overflow!");
 //	}
-	Serial.println(">>");
+	Serial.println(F(">>"));
 }

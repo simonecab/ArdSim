@@ -1,6 +1,11 @@
 #include "Arduino.h"
 #include "gsmsim.h"
+#ifdef GSM_SOFTWARESERIAL
 #include <SoftwareSerial.h>
+#else
+#include <AltSoftSerial.h>
+#endif
+
 
 
 /////////////////////////////////////////
@@ -20,11 +25,16 @@ static int BootPin=0;
 // SETUP GSM
 /////////////////////////////////////////
 
-GSMSIM::GSMSIM(int BOOT_PIN, char*buffer, int ExtBufferSize, int rx, int tx)
-: m_gsmSerial(rx,tx)
+GSMSIM::GSMSIM(int BOOT_PIN, char*buffer, int ExtBufferSize, Stream& S)
+:m_gsmSerial(S)
+#ifdef GSM_SOFTWARESERIAL
+//: m_gsmSerial(rx,tx)
+#endif
+
 {
 	ExtBuffer = buffer;
-	if (ExtBufferSize < EXTBUFFERSIZE) Serial.println(F("Error: Ext Buffer size too small"));
+	if (ExtBufferSize < EXTBUFFERSIZE) ExtBuffer = 0;
+
 	//***************************************
 	//SETUP GSM
 	//***************************************
@@ -48,7 +58,7 @@ int GSMSIM::ConfGSM()
 	Serial.println(F(" - GSM Conf: "));
 	digitalWrite(LEDPIN, HIGH);   // turn the LED on
 
-	m_gsmSerial.listen();
+	//m_gsmSerial.listen();
 
 	// Check network registration status
 	retryCmd = 30;
@@ -106,7 +116,7 @@ int  GSMSIM::ReadSMS()
 	int ret;
 	char *p, *p1;
 	Serial.println(F(" - Read SMS "));
-	m_gsmSerial.listen();
+	//m_gsmSerial.listen();
 	GSM_AT(F("AT+CSQ"));
 	if ( GSM_AT(F("AT+CMGL=4")) != GSMOK) return GSMERROR;
 	return GSMOK;
@@ -115,7 +125,7 @@ int  GSMSIM::ReadSMS()
 
 int  GSMSIM::DeleteAllSMS()
 {
-	m_gsmSerial.listen();
+	//m_gsmSerial.listen();
 	if ( GSM_AT(F("AT+CMGD=0,4")) != GSMOK) return GSMERROR;
 	return GSMOK;
 }
@@ -126,10 +136,13 @@ int  GSMSIM::LoginFTP()
 {
 	int retry;
 
-	m_gsmSerial.listen();
+	//m_gsmSerial.listen();
 
 
 	Serial.println(F(" - LoginFTP: "));
+#if(GSM_BAUDRATE == 2400)
+    {int i=8; while (i--) m_gsmSerial.write(' '); }
+#endif
 	m_gsmSerial.println(F("AT"));
 
 	long int start = millis();
@@ -137,7 +150,9 @@ int  GSMSIM::LoginFTP()
 
 	retry = 2;
 	do {
-
+#if(GSM_BAUDRATE == 2400)
+          {int i=8; while (i--) m_gsmSerial.write(' '); }
+#endif
 		m_gsmSerial.println(F("At+ftplogin=217.64.195.210,21,cabasino.com,Catto1"));
 	} while ((GSMOK != GSM_Response(2)) && (--retry)) ;
 	if (!retry) return GSMERROR;
@@ -152,8 +167,11 @@ int  GSMSIM::StatusFTP()
 {
 	int ret;
 
-	m_gsmSerial.listen();
+	//m_gsmSerial.listen();
 	Serial.println(F(" - StatusFTP: "));
+#if(GSM_BAUDRATE == 2400)
+    {int i=8; while (i--) m_gsmSerial.write(' '); }
+#endif
 	m_gsmSerial.println(F("AT+FTPSTATUS"));
 	GSM_Response(2);
 
@@ -168,13 +186,16 @@ int GSMSIM::PutFTP(const char *file, char *obuf)
 {
 	int i = 0; int result = -1;
 	char putcmd[100];
-	m_gsmSerial.listen();
+	//m_gsmSerial.listen();
 
 	if (StatusFTP() != GSMOK) return GSMERROR;
 
 	Serial.println(F(" - PutFTP: "));
 
 	sprintf(putcmd, "AT+FTPPUT=%s,1,1,%d", file, strlen(obuf));
+#if(GSM_BAUDRATE == 2400)
+    {int i=8; while (i--) m_gsmSerial.write(' '); }
+#endif
 
 	m_gsmSerial.println(putcmd);
 	{
@@ -221,12 +242,15 @@ char *GSMSIM::ReadFTP(char *filename)
 	int i = 0;
 	char putcmd[100];
 
-	m_gsmSerial.listen();
+	//m_gsmSerial.listen();
 
 	if (!StatusFTP()) return "Error";
 
 	Serial.println(F(" - GetFTP: "));
 	sprintf(putcmd, "AT + FTPGET = % s, 1, 1", filename);
+#if(GSM_BAUDRATE == 2400)
+    {int i=8; while (i--) m_gsmSerial.write(' '); }
+#endif
 	m_gsmSerial.println(putcmd);
 	{
 		long int start = millis(); char a;
@@ -267,6 +291,9 @@ int GSMSIM::GSM_AT(const __FlashStringHelper * ATCommand)
 
 	ExtBuffer[0] = 0;
 	//Serial.println(ATCommand);
+#if(GSM_BAUDRATE == 2400)
+    {int i=8; while (i--) m_gsmSerial.write(' '); }
+#endif
 	m_gsmSerial.println(ATCommand);
 	while ((millis() < (start + 3000)) && (done==GSMUNKNOWN)) 
 	{
@@ -299,7 +326,7 @@ int GSMSIM::GSM_Response(int n)  {
 	char a = 0; int pcnt = 0; int i = 0;
 
 	Serial.print (n); Serial.println(F(" RESP : "));
-	if (m_gsmSerial.overflow())      Serial.println("OVERFLOWWWWWW\n");
+	//if (m_gsmSerial.overflow())      Serial.println("OVERFLOWWWWWW\n");
 	while (millis() < start + timeout)
 	{
 		if (m_gsmSerial.available())
@@ -343,12 +370,15 @@ void GSMSIM::SendSMS(char *number, char* message)
 {
 
 	long int start;
-	m_gsmSerial.listen();
+	//m_gsmSerial.listen();
 
 	//GSM_AT(F("AT+CMGD=4[,<delflag>]
 
 	sprintf(ExtBuffer, "- SEND SMS \"%s\" TO %s:", message, number);
 	Serial.println(ExtBuffer);
+#if(GSM_BAUDRATE == 2400)
+    {int i=8; while (i--) m_gsmSerial.write(' '); }
+#endif
 	m_gsmSerial.write("AT+CMGS=");
 	delay(100);
 	sprintf (ExtBuffer, "\"%s\"\r", number); // quoted number
@@ -368,7 +398,7 @@ void GSMSIM::PowerOffGSM()
 {
 	long int start;
 	Serial.println(F("PowerOffGSM"));
-	m_gsmSerial.listen();
+	//m_gsmSerial.listen();
 	//  digitalWrite(GSM_BOOT_PIN, LOW);
 	//  delay(700);
 	//  digitalWrite(GSM_BOOT_PIN, HIGH);
@@ -383,8 +413,12 @@ int GSMSIM::BootGSM()
 {
 	long int start;
 	int retry = 3;
-	m_gsmSerial.begin(GSM_BAUDRATE);
-	m_gsmSerial.listen();
+	
+	if (! ExtBuffer ) Serial.println(F("Error: Ext Buffer size too small"));
+	
+	
+//	m_gsmSerial.begin(GSM_BAUDRATE);
+	//m_gsmSerial.listen();
 	start = millis();
 
 	while (GSM_AT(F("AT")) != GSMOK && --retry)
@@ -428,7 +462,7 @@ int GSMSIM::BootGSM()
 
 void GSMSIM::ProxyGSM()
 { 
-	m_gsmSerial.listen();
+	//m_gsmSerial.listen();
 	Serial.println("<<");
 	long int start = millis();
 
@@ -438,8 +472,8 @@ void GSMSIM::ProxyGSM()
 	while (m_gsmSerial.available()) {
 		Serial.write(m_gsmSerial.read());
 	}
-	if (m_gsmSerial.overflow()) {
-		Serial.println("SoftwareSerial overflow!");
-	}
+//	if (m_gsmSerial.overflow()) {
+//		Serial.println("SoftwareSerial overflow!");
+//	}
 	Serial.println(">>");
 }

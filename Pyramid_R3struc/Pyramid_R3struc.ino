@@ -85,15 +85,17 @@ Adafruit_NeoPixel LedStrip = Adafruit_NeoPixel(4, LEDSTRIPPIN, NEO_GRB + NEO_KHZ
 /////////////////////////////////////////
 #include <TinyGPS.h>
 SoftwareSerial GpsSerial(GPS_RX, GPS_TX); // RX, TX GPS
+//SoftwareSerial GpsSerial(11, GPS_TX); // RX, TX DISABLE GPS
 TinyGPS Gps;
 
 
 /////////////////////////////////////////
 // GSM/FTP DEFINITION AND SETUP
 /////////////////////////////////////////
-GSMSIM GSMSIM(GSM_BOOT_PIN, TmpBuffer, sizeof(TmpBuffer), GSM_RX, GSM_TX);
+SoftwareSerial GsmSerial(GSM_RX, GSM_TX); // RX, TX GSM
+GSMSIM GSMSIM(GSM_BOOT_PIN, TmpBuffer, sizeof(TmpBuffer),  GsmSerial);
 
-//SoftwareSerial GsmSerial(GSM_RX, GSM_TX); // RX, TX GSM
+
 //AltSoftSerial GsmSerial;
 
 
@@ -129,6 +131,8 @@ void setup()
 {
   int i;
   Serial.begin(9600);
+
+  GsmSerial.begin(19200);
 
   //***************************************
   //SETUP AUDIO
@@ -236,6 +240,7 @@ void loop() // run over and over
   //////////////////////////////////////////////////////
   if (Serial.available())
   {
+    GsmSerial.listen();
     char a = Serial.read();
     switch (a)
     {
@@ -272,6 +277,7 @@ void loop() // run over and over
   //////////////////////////////////////////////////////
 
   if ((millis() / 1000) > NextConnectionTime) {
+        GsmSerial.listen();
     long int now = millis() / 1000;
 
     if (NextConnectionTime < UPDATETIMEFINAL)

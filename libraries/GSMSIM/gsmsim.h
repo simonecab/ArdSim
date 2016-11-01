@@ -15,13 +15,7 @@ extern long int GSMErrors;
 #define GSMOK          1
 #define GSMUNKNOWN     0
 
-//#define GSM_ALTSOFTSERIAL
-#define GSM_SOFTWARESERIAL
-#ifdef GSM_SOFTWARESERIAL
-#include <SoftwareSerial.h>
-#else
-#include <AltSoftSerial.h>
-#endif
+
 
 #define LEDPIN        13  // default arduino LED
 
@@ -31,11 +25,7 @@ extern long int GSMErrors;
 class GSMSIM
 {
 
-#ifdef GSM_SOFTWARESERIAL
-//  SoftwareSerial m_gsmSerial;
-#else
-//  AltSoftSerial m_gsmSerial;
-#endif
+
 Stream& m_gsmSerial;
 public:
 GSMSIM(int BOOT, char *TmpBuffer, int TmpBuffersize, Stream& m_gsmSerial);

@@ -109,7 +109,12 @@ GSMSIM GSMSIM(GSM_BOOT_PIN, TmpBuffer, sizeof(TmpBuffer),  GsmSerial);
 #define UPDATETIMEINITIAL 60;   // initial update interval
 int MFile = 1; // id file multipli
 long int NextConnectionTime = 15;
-int ReduceLed = 1;
+
+
+#define REDUCE_LED 1
+#define GPS_LOG 2
+int option = REDUCE_LED;
+
 
 #define HUNKNOWN 0
 #define HERROR -1
@@ -218,7 +223,8 @@ void setup()
 }
 void printHelp()
 {
-  Serial.print(F("\n.AT cmd, h(alt), a(udio), p(ut), l(ogin), g(ps_status)\nr(eadFtp), b(oot), c(onf_gsm), s(tatus), t(est), R(ead), S(end)\n"));
+  Serial.print(F("\n.AT cmd, h(alt), a(udio), p(ut), l(ogin), g(ps_status), G(PS log)\
+  \nr(eadFtp), b(oot), c(onf_gsm), s(tatus), t(est), R(ead), S(end)\n"));
   Serial.println(F("cmd# "));
 }
 
@@ -234,7 +240,7 @@ void loop() // run over and over
     char c;
     c = GpsSerial.read();
     Gps.encode(c);
-    //Serial.print(c);
+    if (option & GPS_LOG) Serial.print(c);
   }
 
 
@@ -255,11 +261,12 @@ void loop() // run over and over
       case 'a': Serial.println(F("play file 2")); AudioPlay(2, 18); break;
       case 'b': GSMSIM.BootGSM();  break;
       case 'g': PutFTPGps(GSMUNKNOWN);  break;
-      case 'h': Serial.println(F("send ogni ora")); printHelp(); NextConnectionTime = 3600000; ReduceLed = 1; break;
+      case 'h': Serial.println(F("send ogni ora")); printHelp(); NextConnectionTime = 3600000; option ^= REDUCE_LED; break;
       case 'r': Serial.println(GSMSIM.ReadFTP("command.txt")); break;
       case 'R': Serial.println(GSMSIM.ReadSMS());Serial.println(TmpBuffer); break;
       case 't': TestSensors(); break;
       case 'S': GSMSIM.SendSMS("3296315064", "ciao bongo");  break;
+      case 'G': option ^= GPS_LOG; break;
       case '.': GSMSIM.ProxyGSM();  break;
 
       default: printHelp(); 
@@ -348,7 +355,7 @@ void loop() // run over and over
       case HOK:      colorWipe(LedStrip.Color(0,   0,   255), 50); blink(1, BLINK_FAST); break; // blue
       default:       colorWipe(LedStrip.Color(255, 255, 0),   50); break;// yellow
     }
-    if (!ReduceLed)
+    if (option ^ REDUCE_LED)
     {
       ReadAccelMPU();
       colorWipe(LedStrip.Color(AcX > 4000 ? 255 : 0, AcY > 4000 ? 255 : 0, AcZ > 4000 ? 255 : 0), 50);
@@ -385,11 +392,10 @@ int PutFTPGps(int transmit)
   Gps.get_position(&lat, &lon, &fix_age);
   Gps.get_datetime(&date, &gpsTime, &fix_age);
   
-  Serial.print(F("rcv:fail time "));
-  Serial.print(sentences);
-  Serial.print(":");
-  Serial.println(failed_checksum);
-  Serial.println(gpsTime);
+  Serial.print(F("Chars: "));  Serial.print(chars);
+  Serial.print(F(" Fix: "));   Serial.print(sentences);
+  Serial.print(F(" Fail: "));  Serial.println(failed_checksum);
+  Serial.print(F("Time: "));   Serial.println(gpsTime);
 
 
   if (fix_age == 4294967295 )

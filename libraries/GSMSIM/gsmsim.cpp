@@ -1,10 +1,6 @@
 #include "Arduino.h"
 #include "gsmsim.h"
-#ifdef GSM_SOFTWARESERIAL
-#include <SoftwareSerial.h>
-#else
-#include <AltSoftSerial.h>
-#endif
+
 
 
 
@@ -16,7 +12,7 @@
 long int GSMErrors = 0;
 #define GSM_RX    8      // CEPRI PIN 9   : NEOWAY PIN 14
 #define GSM_TX    9      // CEPRI PIN 10  : NEOWAY PIN 16
-#define GSM_BAUDRATE 19200
+// #define GSM_2400BAUD_PATCH  // not working with softserial!
 // SoftwareSerial GsmSerial(GSM_RX,GSM_TX);
 static char *ExtBuffer;
 static int BootPin=0;
@@ -140,7 +136,7 @@ int  GSMSIM::LoginFTP()
 
 
 	Serial.println(F(" - LoginFTP: "));
-#if(GSM_BAUDRATE == 2400)
+#ifdef GSM_2400BAUD_PATCH
     {int i=8; while (i--) m_gsmSerial.write(' '); }
 #endif
 	m_gsmSerial.println(F("AT"));
@@ -150,7 +146,7 @@ int  GSMSIM::LoginFTP()
 
 	retry = 2;
 	do {
-#if(GSM_BAUDRATE == 2400)
+#ifdef GSM_2400BAUD_PATCH
           {int i=8; while (i--) m_gsmSerial.write(' '); }
 #endif
 		m_gsmSerial.println(F("At+ftplogin=217.64.195.210,21,cabasino.com,Catto1"));
@@ -169,7 +165,7 @@ int  GSMSIM::StatusFTP()
 
 	//m_gsmSerial.listen();
 	Serial.println(F(" - StatusFTP: "));
-#if(GSM_BAUDRATE == 2400)
+#ifdef GSM_2400BAUD_PATCH
     {int i=8; while (i--) m_gsmSerial.write(' '); }
 #endif
 	m_gsmSerial.println(F("AT+FTPSTATUS"));
@@ -193,7 +189,7 @@ int GSMSIM::PutFTP(const char *file, char *obuf)
 	Serial.println(F(" - PutFTP: "));
 
 	sprintf(putcmd, "AT+FTPPUT=%s,1,1,%d", file, strlen(obuf));
-#if(GSM_BAUDRATE == 2400)
+#ifdef GSM_2400BAUD_PATCH
     {int i=8; while (i--) m_gsmSerial.write(' '); }
 #endif
 
@@ -248,7 +244,7 @@ char *GSMSIM::ReadFTP(char *filename)
 
 	Serial.println(F(" - GetFTP: "));
 	sprintf(putcmd, "AT + FTPGET = % s, 1, 1", filename);
-#if(GSM_BAUDRATE == 2400)
+#ifdef GSM_2400BAUD_PATCH
     {int i=8; while (i--) m_gsmSerial.write(' '); }
 #endif
 	m_gsmSerial.println(putcmd);
@@ -291,7 +287,7 @@ int GSMSIM::GSM_AT(const __FlashStringHelper * ATCommand)
 
 	ExtBuffer[0] = 0;
 	//Serial.println(ATCommand);
-#if(GSM_BAUDRATE == 2400)
+#ifdef GSM_2400BAUD_PATCH
     {int i=8; while (i--) m_gsmSerial.write(' '); }
 #endif
 	m_gsmSerial.println(ATCommand);
@@ -376,7 +372,7 @@ void GSMSIM::SendSMS(char *number, char* message)
 
 	sprintf(ExtBuffer, "- SEND SMS \"%s\" TO %s:", message, number);
 	Serial.println(ExtBuffer);
-#if(GSM_BAUDRATE == 2400)
+#ifdef GSM_2400BAUD_PATCH
     {int i=8; while (i--) m_gsmSerial.write(' '); }
 #endif
 	m_gsmSerial.write("AT+CMGS=");

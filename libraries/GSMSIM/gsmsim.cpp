@@ -7,13 +7,12 @@
 /////////////////////////////////////////
 // GSM/FTP DEFINITION
 /////////////////////////////////////////
-//extern SoftwareSerial GsmSerial(GSM_RX, GSM_TX); // RX, TX GSM
 
 long int GSMErrors = 0;
 #define GSM_RX    8      // CEPRI PIN 9   : NEOWAY PIN 14
 #define GSM_TX    9      // CEPRI PIN 10  : NEOWAY PIN 16
-// #define GSM_2400BAUD_PATCH  // not working with softserial!
-// SoftwareSerial GsmSerial(GSM_RX,GSM_TX);
+//#define GSM_2400BAUD_PATCH  // not working with softserial!
+
 static char *ExtBuffer;
 static int BootPin=0;
 
@@ -23,10 +22,6 @@ static int BootPin=0;
 
 GSMSIM::GSMSIM(int BOOT_PIN, char*buffer, int ExtBufferSize, Stream& S)
 :m_gsmSerial(S)
-#ifdef GSM_SOFTWARESERIAL
-//: m_gsmSerial(rx,tx)
-#endif
-
 {
 	ExtBuffer = buffer;
 	if (ExtBufferSize < EXTBUFFERSIZE) ExtBuffer = 0;
@@ -464,7 +459,7 @@ void GSMSIM::ProxyGSM()
 	long int start = millis();
 
 	delay(100);
-	while (Serial.available())m_gsmSerial.write(Serial.read());
+	while (Serial.available()){char a=Serial.read(); if(a=='|') m_gsmSerial.println(""); else m_gsmSerial.write(a); }
 	while (millis() < start + 5000)
 	while (m_gsmSerial.available()) {
 		Serial.write(m_gsmSerial.read());

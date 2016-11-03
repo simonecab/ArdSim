@@ -29,6 +29,8 @@ char TmpBuffer[200];
 #define LEDPIN        13  // default arduino LED
 #define VOLTINPIN     1   // Analog input connected to intermediate battery (less than 5v)
 
+#define BUTTONPIN     2
+
 
 SoftwareSerial ScannerSerial(SCANNER_RX, SCANNER_TX);
 /////////////////////////////////////////
@@ -75,10 +77,10 @@ GSMSIM GSMSIM(GSM_BOOT_PIN, TmpBuffer, sizeof(TmpBuffer),  GsmSerial);
 int MFile = 1; // id file multipli
 long int NextConnectionTime = 15;
 
-
+#define  IRQ_ACT 4
 #define REDUCE_LED 1
 #define GPS_LOG 2
-int option = REDUCE_LED;
+volatile int option = REDUCE_LED;
 
 
 #define HUNKNOWN 0
@@ -170,6 +172,7 @@ void setup()
  //     Serial.println("---->");
 //      Serial.println(x,HEX);
 //    }
+#ifdef PCF8574_PRESENT
 Serial.println("---->");
 while (1)
 {
@@ -186,7 +189,7 @@ delay (500);
   Serial.println(PCF8574.read(2));
   Serial.println(PCF8574.read(3));
   Serial.println(PCF8574.read(4));
-
+#endif
 /* for (int i=0; i<8; i++)
   {
   PCF.toggle(i);
@@ -195,6 +198,11 @@ delay (500);
   delay(100);
   }
 */
+
+pinMode(BUTTONPIN, INPUT_PULLUP);
+attachInterrupt(digitalPinToInterrupt(BUTTONPIN), Test, FALLING  );
+
+
 
 //***************************************
 //END SETUP
@@ -227,12 +235,13 @@ void loop() // run over and over
   }
 
 
-
+   if (option&IRQ_ACT) { Serial.print("IRQ!!");    option&= ~IRQ_ACT; }
   //////////////////////////////////////////////////////
   // CONSOLE COMMAND PROCESSING
   //////////////////////////////////////////////////////
   if (Serial.available())
   {
+
     ScannerSerial.listen();
     char a = Serial.read();
     switch (a)
@@ -400,7 +409,10 @@ int PutFTPGps(int transmit)
 }
 
 void Test()
-{}
+{
+  
+     option|=  IRQ_ACT;
+  }
 
 void Scanner()
 {

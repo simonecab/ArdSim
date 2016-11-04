@@ -37,7 +37,7 @@ SoftwareSerial ScannerSerial(SCANNER_RX, SCANNER_TX);
 // PCF8574
 /////////////////////////////////////////
 
-PCF8574 PCF8574(0x20);  
+PCF8574 PCF8574(0x20);
 
 
 /////////////////////////////////////////
@@ -161,55 +161,63 @@ void setup()
   //***************************************
   //SETUP PCF8574
   //***************************************
- // Wire.begin();
-
- //   Wire.requestFrom(0x20, 1);
- //   Serial.println(0x20);
- //   delay(10);
- //   if (Wire.available())    //If the request is available
- //   { int x;
- //     x = Wire.read();     //Receive the data
- //     Serial.println("---->");
-//      Serial.println(x,HEX);
-//    }
-#ifdef PCF8574_PRESENT
-Serial.println("---->");
-while (1)
+#ifdef topo
+  Wire.begin();
+while(1)
 {
-for (i=0;i<7;i++) PCF8574.write(i, 1);
-delay (500);
-for (i=0;i<7;i++) PCF8574.write(i, 0);
-delay (500);
-for (i=0;i<7;i++) PCF8574.write(i, 1);
-delay (500);
-for (i=0;i<7;i++) PCF8574.write(i, 0);
-delay (500);
+  Wire.requestFrom(0x20, 1);
+   delay(10);
+  if (Wire.available())    //If the request is available
+   {
+      int x;
+      x = Wire.read();     //Receive the data
+      Serial.println("---->");
+      Serial.println(x, HEX);
+      delay(2000);
+    }
 }
+#endif
+#ifndef PCF8574_PRESENT
+  Serial.println("PCF---->");
+  while (1)
+  {
+    //for (i = 0; i < 7; i++) PCF8574.write(i, 1);
+    delay (200);
+   // for (i = 0; i < 7; i++) PCF8574.write(i, 1);
+    delay (200);
+    //for (i = 0; i < 7; i++) PCF8574.write(i, 1);
+    delay (200);
+    for (i = 0; i < 7; i++) PCF8574.write(i, 1);
+    delay (200);
+  
+  Serial.println("0 1 2 3 4" );  
+    Serial.println(PCF8574.read(0));
   Serial.println(PCF8574.read(1));
   Serial.println(PCF8574.read(2));
   Serial.println(PCF8574.read(3));
-  Serial.println(PCF8574.read(4));
-#endif
-/* for (int i=0; i<8; i++)
-  {
-  PCF.toggle(i);
-  delay(100);
-  PCF.toggle(i);
-  delay(100);
+ Serial.println(PCF8574.read(4));
   }
-*/
+#endif
+  /* for (int i=0; i<8; i++)
+    {
+    PCF.toggle(i);
+    delay(100);
+    PCF.toggle(i);
+    delay(100);
+    }
+  */
 
-pinMode(BUTTONPIN, INPUT_PULLUP);
-attachInterrupt(digitalPinToInterrupt(BUTTONPIN), Test, FALLING  );
+  pinMode(BUTTONPIN, INPUT_PULLUP);
+  attachInterrupt(digitalPinToInterrupt(BUTTONPIN), Test, FALLING  );
 
 
 
-//***************************************
-//END SETUP
-//***************************************
+  //***************************************
+  //END SETUP
+  //***************************************
 
-printHelp();
-// GpsSerial.listen();
+  printHelp();
+  // GpsSerial.listen();
 
 }
 void printHelp()
@@ -235,7 +243,10 @@ void loop() // run over and over
   }
 
 
-   if (option&IRQ_ACT) { Serial.print("IRQ!!");    option&= ~IRQ_ACT; }
+  if (option & IRQ_ACT) {
+    Serial.print("IRQ!!");
+    option &= ~IRQ_ACT;
+  }
   //////////////////////////////////////////////////////
   // CONSOLE COMMAND PROCESSING
   //////////////////////////////////////////////////////
@@ -410,9 +421,9 @@ int PutFTPGps(int transmit)
 
 void Test()
 {
-  
-     option|=  IRQ_ACT;
-  }
+
+  option |=  IRQ_ACT;
+}
 
 void Scanner()
 {

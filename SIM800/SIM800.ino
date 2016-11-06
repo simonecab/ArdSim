@@ -172,7 +172,7 @@ void loop() // run over and over
       case '.': GSMSIM.ProxyGSM();  break;
       case 'b': boot(); break;
       case 'e': endGSM(); break;
-      case 'p': post(); break;
+      case 'p': post("SCANID,SEQN,TIME,LATLAT,LONLON"); break;
       default: printHelp();
 
 
@@ -223,9 +223,23 @@ void endGSM()
   GSMSIM.GSM_AT(F("AT+SAPBR=0,1")) ;
 }
 
-int  post()
+int  post(char *msg)
 {
   int retry;
+  char ScanBuffer[70];
+
+  unsigned char c = 0;
+  int i;
+    strcpy(ScanBuffer,msg);
+  for (i = 0; i < 64; i++)
+    c ^= ScanBuffer[i];
+
+  ScanBuffer[64] = c;
+
+
+
+
+
   if ( GSMSIM.GSM_AT(F("AT+CREG?")) != GSMOK) return GSMERROR ;
   if ( GSMSIM.GSM_AT(F("AT+CSQ")) != GSMOK) return GSMERROR ;
   if ( GSMSIM.GSM_AT(F("AT+CGATT?")) != GSMOK) return GSMERROR ;
@@ -241,7 +255,7 @@ int  post()
   if (    GSMSIM.GSM_AT(F("AT+HTTPPARA=\"CID\",1")) != GSMOK) return GSMERROR ;
   if (  GSMSIM.GSM_AT(F("AT+HTTPPARA=\"URL\",\"http://184.73.165.170/b2bg/xxx.php\"")) != GSMOK) return GSMERROR ; \
 
-  GsmSerial.println(F("AT+HTTPDATA=10,10000"));
+  GsmSerial.println(F("AT+HTTPDATA=65,10000"));
 
   {
     long int start = millis();
@@ -250,15 +264,17 @@ int  post()
       Serial.write(GsmSerial.read());
   }
 
-GsmSerial.write("Un topo!  ",10);
+  GsmSerial.write(ScanBuffer, 65);
   if ( GSMSIM.GSM_AT(F("AT")) != GSMOK) return GSMERROR ;
 
   GsmSerial.println(F("AT+HTTPACTION=1"));
-    GSMSIM.GSM_Response(2);
-    
-    if (  GSMSIM.GSM_AT(F("AT+HTTPREAD=0,50")) != GSMOK) return GSMERROR ;
+  GSMSIM.GSM_Response(2);
 
+  if (  GSMSIM.GSM_AT(F("AT+HTTPREAD=0,50")) != GSMOK) return GSMERROR ;
 
+  if (atoi(strstr(TmpBuffer, "#")+1) != (int) ScanBuffer[64]) Serial.println("Disastro!\n");
 }
+
+
 
 

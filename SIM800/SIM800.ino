@@ -254,7 +254,10 @@ GsmSerial.write("Un topo!  ",10);
   if ( GSMSIM.GSM_AT(F("AT")) != GSMOK) return GSMERROR ;
 
   GsmSerial.println(F("AT+HTTPACTION=1"));
-  GSMSIM.GSM_Response(2);
+    GSMSIM.GSM_Response(2);
+    
+    if (  GSMSIM.GSM_AT(F("AT+HTTPREAD=0,50")) != GSMOK) return GSMERROR ;
+
 
 }
 

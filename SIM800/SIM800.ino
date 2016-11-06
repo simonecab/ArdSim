@@ -138,7 +138,7 @@ void setup()
 }
 void printHelp()
 {
-  Serial.print(F("\n.AT cmd, h(alt), a(udio), p(ut), l(ogin), g(ps_status), G(PS log)\
+  Serial.print(F("\n.AT cmd, h(alt), p(ost), l(ogin), g(ps_status), G(PS log)\
   \nr(eadFtp), b(oot), c(onf_gsm), s(tatus), t(est), R(ead), S(end)\n"));
   Serial.println(F("cmd# "));
 }
@@ -171,7 +171,8 @@ void loop() // run over and over
     {
       case '.': GSMSIM.ProxyGSM();  break;
       case 'b': boot(); break;
-      case 'e':endGSM(); break;
+      case 'e': endGSM(); break;
+      case 'p': post(); break;
       default: printHelp();
 
 
@@ -199,29 +200,62 @@ int  boot()
   if ( GSMSIM.GSM_AT(F("AT+SAPBR=3,1,\"Contype\",\"GPRS\"")) != GSMOK) return GSMERROR ;
   if ( GSMSIM.GSM_AT(F("AT+SAPBR=3,1,\"APN\",\"ibox.tim.it\"")) != GSMOK) return GSMERROR ;
 
-retry=5;
-  while (--retry &&  ( GSMSIM.GSM_AT(F("AT+SAPBR=1,1")) != GSMOK))delay(2000); 
-if (!retry)return GSMERROR ;
- if ( GSMSIM.GSM_AT(F("AT+SAPBR=2,1")) != GSMOK) return GSMERROR ;
- 
- if (  GSMSIM.GSM_AT(F("AT+HTTPINIT")) != GSMOK) return GSMERROR ;
- if (    GSMSIM.GSM_AT(F("AT+HTTPPARA=\"CID\",1")) != GSMOK) return GSMERROR ;
- if (  GSMSIM.GSM_AT(F("AT+HTTPPARA=\"URL\",\"www.google.com\"")) != GSMOK) return GSMERROR ;\
+  retry = 5;
+  while (--retry &&  ( GSMSIM.GSM_AT(F("AT+SAPBR=1,1")) != GSMOK))delay(2000);
+  if (!retry)return GSMERROR ;
+  if ( GSMSIM.GSM_AT(F("AT+SAPBR=2,1")) != GSMOK) return GSMERROR ;
+
+  if (  GSMSIM.GSM_AT(F("AT+HTTPINIT")) != GSMOK) return GSMERROR ;
+  if (    GSMSIM.GSM_AT(F("AT+HTTPPARA=\"CID\",1")) != GSMOK) return GSMERROR ;
+  if (  GSMSIM.GSM_AT(F("AT+HTTPPARA=\"URL\",\"http://184.73.165.170/b2bg/xxx.log\"")) != GSMOK) return GSMERROR ; \
 
   GsmSerial.println(F("AT+HTTPACTION=0"));
   GSMSIM.GSM_Response(2);
 
- if (  GSMSIM.GSM_AT(F("AT+HTTPREAD=0,50")) != GSMOK) return GSMERROR ;
- endGSM();
+  if (  GSMSIM.GSM_AT(F("AT+HTTPREAD=0,50")) != GSMOK) return GSMERROR ;
+  //endGSM();
 
 }
 
 void endGSM()
 {
-GSMSIM.GSM_AT(F("AT+HTTPTERM")) ;
-GSMSIM.GSM_AT(F("AT+SAPBR=0,1")) ;
+  GSMSIM.GSM_AT(F("AT+HTTPTERM")) ;
+  GSMSIM.GSM_AT(F("AT+SAPBR=0,1")) ;
 }
 
+int  post()
+{
+  int retry;
+  if ( GSMSIM.GSM_AT(F("AT+CREG?")) != GSMOK) return GSMERROR ;
+  if ( GSMSIM.GSM_AT(F("AT+CSQ")) != GSMOK) return GSMERROR ;
+  if ( GSMSIM.GSM_AT(F("AT+CGATT?")) != GSMOK) return GSMERROR ;
+  if ( GSMSIM.GSM_AT(F("AT+SAPBR=3,1,\"Contype\",\"GPRS\"")) != GSMOK) return GSMERROR ;
+  if ( GSMSIM.GSM_AT(F("AT+SAPBR=3,1,\"APN\",\"ibox.tim.it\"")) != GSMOK) return GSMERROR ;
 
+  retry = 5;
+  while (--retry &&  ( GSMSIM.GSM_AT(F("AT+SAPBR=1,1")) != GSMOK))delay(2000);
+  if (!retry)return GSMERROR ;
+  if ( GSMSIM.GSM_AT(F("AT+SAPBR=2,1")) != GSMOK) return GSMERROR ;
+
+  if (  GSMSIM.GSM_AT(F("AT+HTTPINIT")) != GSMOK) return GSMERROR ;
+  if (    GSMSIM.GSM_AT(F("AT+HTTPPARA=\"CID\",1")) != GSMOK) return GSMERROR ;
+  if (  GSMSIM.GSM_AT(F("AT+HTTPPARA=\"URL\",\"http://184.73.165.170/b2bg/xxx.php\"")) != GSMOK) return GSMERROR ; \
+
+  GsmSerial.println(F("AT+HTTPDATA=10,10000"));
+
+  {
+    long int start = millis();
+    delay(400);
+    while (GsmSerial.available())
+      Serial.write(GsmSerial.read());
+  }
+
+GsmSerial.write("Un topo!  ",10);
+  if ( GSMSIM.GSM_AT(F("AT")) != GSMOK) return GSMERROR ;
+
+  GsmSerial.println(F("AT+HTTPACTION=1"));
+  GSMSIM.GSM_Response(2);
+
+}
 
 

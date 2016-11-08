@@ -286,7 +286,7 @@ int GSMSIM::GSM_AT(const __FlashStringHelper * ATCommand)
     {int i=8; while (i--) m_gsmSerial.write(' '); }
 #endif
 	m_gsmSerial.println(ATCommand);
-	while ((millis() < (start + 3000)) && (done==GSMUNKNOWN)) 
+	while ((millis() < (start + 6000)) && (done==GSMUNKNOWN)) 
 	{
 		if (m_gsmSerial.available()) ExtBuffer[i++] = m_gsmSerial.read();
 		if (i > 2) if (!strncmp(ExtBuffer + i - 3, "OK", 2)) done = GSMOK;

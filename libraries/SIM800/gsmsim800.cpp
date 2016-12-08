@@ -323,7 +323,7 @@ int GSMSIM::GSM_Response(int n)  {
 		if (m_gsmSerial.available())
 		{
 			a = m_gsmSerial.read();
-			Serial.write(a);
+			//Serial.write(a);
 
 			if (a == '+') {
 				pcnt++;

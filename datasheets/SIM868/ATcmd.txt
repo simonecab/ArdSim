@@ -1,0 +1,7 @@
+AT+CREG?
+AT+CSQ
+AT+CGATT?
+AT+SAPBR=3,1,"Contype","GPRS"
+AT+SAPBR=3,1,"APN","ibox.tim.it"
+AT+SAPBR=1,1
+AT+SAPBR=2,1

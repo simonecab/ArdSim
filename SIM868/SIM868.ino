@@ -14,11 +14,7 @@ char TmpBuffer[200];
 #define AUDIO_RX  4        //can be disconnected to TX of the Serial MP3 Player module
 #define AUDIO_TX  12        //connect to RX of the module
 
-#define GPS_RX    6         // (was 6) connect to TX of module 
-#define GPS_TX    7         // (was 7)connect to RX of module
 
-// PIN POWER NEOWAY 2 e 4 CONNECTED TO ARDUINO 5V e GND congigui (2to5V  4toGND)
-// PIN POWER CEPRI  4 e 2 CONNECTED TO ARDUINO 5V e GND congigui (2toGND 4toVCC)
 #define GSM_RX    8      // CEPRI PIN 9   : NEOWAY PIN 14  : ITRUKG  PIN T
 #define GSM_TX    9      // CEPRI PIN 10  : NEOWAY PIN 16  : ITRUKG  PIN R
 #define GSM_BOOT_PIN  3       // Neoway M590 boot pin if available : CEPRI PIN 14 : NEOWAY PIN 19 : ITRUKG  PIN K
@@ -29,13 +25,6 @@ char TmpBuffer[200];
 #define VOLTINPIN     1   // Analog input connected to intermediate battery (less than 5v)
 
 
-/////////////////////////////////////////
-// GPS DEFINITIONS
-/////////////////////////////////////////
-#include <TinyGPS.h>
-SoftwareSerial GpsSerial(GPS_RX, GPS_TX); // RX, TX GPS
-//SoftwareSerial GpsSerial(11, GPS_TX); // RX, TX DISABLE GPS
-TinyGPS Gps;
 
 
 /////////////////////////////////////////
@@ -61,7 +50,6 @@ long int NextConnectionTime = 15;
 
 
 #define REDUCE_LED 1
-#define GPS_LOG 2
 int option = REDUCE_LED;
 
 
@@ -92,33 +80,8 @@ void setup()
   //***************************************
   GsmSerial.begin(19200);
   //***************************************
-  //SETUP AND TEST GPS
-  //***************************************
-  pinMode(GPS_TX, OUTPUT);
-  pinMode(GPS_RX, INPUT);
-  GpsSerial.begin(9600);
 
 
-  GpsSerial.flush();
-
-  delay(500);
-  GpsSerial.listen();
-  i = 0;
-  TmpBuffer[0] = 0;
-  TmpBuffer[1] = 0;
-  if (GpsSerial.available())
-    while (millis() < 10000 && i < 190)
-      while (GpsSerial.available())
-      {
-        TmpBuffer[i] = GpsSerial.read();
-        //Serial.print(TmpBuffer[i]);
-        if (TmpBuffer[0] == '$') {
-          i++;
-          if (TmpBuffer[1] == 'G') break;
-        }
-      }
-  if (!strncmp(TmpBuffer, "$G", 2))Serial.println(F("GPS TEST PASSED"));
-  else Serial.println(F("GPS TIMEOUT"));
 
   //***************************************
   //SETUP ON BOARD LED
@@ -133,31 +96,18 @@ void setup()
   //***************************************
 
   printHelp();
-  GpsSerial.listen();
+
 
 }
 void printHelp()
 {
-  Serial.print(F("\n.AT cmd, h(alt), p(ost), l(ogin), g(ps_status), G(PS log)\
-  \nr(eadFtp), b(oot), c(onf_gsm), s(tatus), t(est), R(ead), S(end)\n"));
+  Serial.print(F("\n.AT cmd, h(alt), p(ost),  g(et), G(PS log), b(oot), \n"));
   Serial.println(F("cmd# "));
 }
 
 
 void loop() // run over and over
 {
-  //////////////////////////////////////////////////////
-  // GPS PROCESSING
-  //////////////////////////////////////////////////////
-
-  if (GpsSerial.available())
-  {
-    char c;
-    c = GpsSerial.read();
-    Gps.encode(c);
-    if (option & GPS_LOG) Serial.print(c);
-  }
-
 
 
   //////////////////////////////////////////////////////
@@ -173,6 +123,7 @@ void loop() // run over and over
       case 'b': boot(); break;
       case 'e': endGSM(); break;
       case 'g': get(); break;
+      case 'G': Serial.println(GPS()); break;
       case 'p': post("SCANID1,  SEQN,TIME,Lat,Lon"); break;
       default: printHelp();
 
@@ -185,7 +136,7 @@ void loop() // run over and over
     }
 
     Serial.println(F("cmd# "));
-    GpsSerial.listen();
+
   }
 
 
@@ -197,15 +148,24 @@ int  boot()
   int retry;
   if ( GSMSIM.GSM_AT(F("AT+CREG?")) != GSMOK) return GSMERROR ;
   if ( GSMSIM.GSM_AT(F("AT+CSQ")) != GSMOK) return GSMERROR ;
-  do {if ( GSMSIM.GSM_AT(F("AT+CGATT?")) != GSMOK) return GSMERROR ; } while (!strstr(TmpBuffer,"1"));
-  
+  do {
+    if ( GSMSIM.GSM_AT(F("AT+CGATT?")) != GSMOK) return GSMERROR ;
+    delay(500);
+  } while (!strstr(TmpBuffer, "1"));
+
   if ( GSMSIM.GSM_AT(F("AT+SAPBR=3,1,\"Contype\",\"GPRS\"")) != GSMOK) return GSMERROR ;
   if ( GSMSIM.GSM_AT(F("AT+SAPBR=3,1,\"APN\",\"ibox.tim.it\"")) != GSMOK) return GSMERROR ;
+  if ( GSMSIM.GSM_AT(F("AT+CGNSPWR=1")) != GSMOK) return GSMERROR ;
 
   retry = 5;
-  while (--retry &&  ( GSMSIM.GSM_AT(F("AT+SAPBR=1,1")) != GSMOK))delay(2000);
-  if (!retry)return GSMERROR ;
+
+
   if ( GSMSIM.GSM_AT(F("AT+SAPBR=2,1")) != GSMOK) return GSMERROR ;
+  if (strstr(TmpBuffer, "0.0.0.0"))
+  {
+    while (--retry &&  ( GSMSIM.GSM_AT(F("AT+SAPBR=1,1")) != GSMOK))delay(2000);
+    if (!retry)return GSMERROR ;
+  }
 
   if (  GSMSIM.GSM_AT(F("AT+HTTPINIT")) != GSMOK) return GSMERROR ;
 
@@ -213,10 +173,19 @@ int  boot()
 
 }
 
+char  *GPS()
+{
+
+  GsmSerial.println(F("AT+CGNSINF"));
+  GSMSIM.GSM_Response(2);
+
+  return TmpBuffer + 10;
+}
+
 
 int  get()
 {
-    if (    GSMSIM.GSM_AT(F("AT+HTTPPARA=\"CID\",1")) != GSMOK) return GSMERROR ;
+  if (  GSMSIM.GSM_AT(F("AT+HTTPPARA=\"CID\",1")) != GSMOK) return GSMERROR ;
   if (  GSMSIM.GSM_AT(F("AT+HTTPPARA=\"URL\",\"http://184.73.165.170/b2bg/xxx.log\"")) != GSMOK) return GSMERROR ; \
 
   GsmSerial.println(F("AT+HTTPACTION=0"));
@@ -236,45 +205,46 @@ int  post(char *msg)
   int retry;
   char ScanBuffer[70];
 
-  unsigned char c,c1;
+  unsigned char c = 0 ;
   int i;
-  c = 0;
-  for (i = 0; i < 66; i++)ScanBuffer[i] = i+(int)'0';
+  for (i = 0; i < 64; i++) ScanBuffer[i] = 0;
   strcpy(ScanBuffer, msg);
-  //ScanBuffer[1]=0;
-  c=0;
-    c1=0;
-  for (i = 0; i < 64; i++) ScanBuffer[i]=0;
-    strcpy(ScanBuffer, msg);
- // ScanBuffer[0]='C';
- // ScanBuffer[1]='S';
 
-  for (i = 0; i < 64; i++) { Serial.print(i); Serial.print(" "); Serial.print(ScanBuffer[i],HEX); c ^= ScanBuffer[i]; c1 += ScanBuffer[i]; Serial.print(" "); Serial.println(c,HEX); }
+  for (i = 0; i < 64; i++) c ^= ScanBuffer[i];
   ScanBuffer[64] = c;
 
-
-
+  
   if (  GSMSIM.GSM_AT(F("AT+HTTPPARA=\"CID\",1")) != GSMOK) return GSMERROR ;
   if (  GSMSIM.GSM_AT(F("AT+HTTPPARA=\"URL\",\"http://184.73.165.170/b2bg/xxx.php\"")) != GSMOK) return GSMERROR ; \
 
+  // PREPARE TO SEND POST PAYLOAD
   GsmSerial.println(F("AT+HTTPDATA=65,10000"));
 
+  // WAIT "DOWNLOAD" REQUEST 
   {
+    int i=0;
+    TmpBuffer[0]=0;
     long int start = millis();
-    delay(500);
-    while (GsmSerial.available())
-      Serial.write(GsmSerial.read());
+    while( (millis()< (start + 500)) && !strstr(TmpBuffer,"DOWNLOAD"))
+    {
+      if(GsmSerial.available()) { TmpBuffer[i]=GsmSerial.read(); Serial.write(TmpBuffer[i]); i++ ; }
+    }
   }
 
+  // SEND POST PAYLOAD 
   GsmSerial.write(ScanBuffer, 65);
-  if ( GSMSIM.GSM_AT(F("AT")) != GSMOK) return GSMERROR ;
 
+  // WAIT "OK" DOWNLOAD
+  if ( GSMSIM.GSM_AT(F("")) != GSMOK) return GSMERROR ;
+
+  // DO POST
   GsmSerial.println(F("AT+HTTPACTION=1"));
   GSMSIM.GSM_Response(2);
 
+  // DO READ POST RETURNED BUFFER
   if (  GSMSIM.GSM_AT(F("AT+HTTPREAD=0,50")) != GSMOK) return GSMERROR ;
-Serial.println(TmpBuffer);
-  if ((int) *(strstr(TmpBuffer, "#")+1) != (int) ScanBuffer[64]) Serial.println("Disastro!\n"); else Serial.println("Successo!\n");
+  Serial.println(TmpBuffer);
+  if ((int) * (strstr(TmpBuffer, "#") + 1) != (int) ScanBuffer[64]) Serial.println("Disastro!\n"); else Serial.println("Successo!\n");
 }
 
 

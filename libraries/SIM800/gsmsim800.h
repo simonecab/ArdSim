@@ -41,6 +41,8 @@ void SendSMS(char *number, char* message);
 void PowerOffGSM();
 int  BootGSM();
 void ProxyGSM();
+int  HTTP_post(char *payload, int payloadSize, const __FlashStringHelper *URL);
+int  HTTP_get(int dataOffset, int dataSize, const __FlashStringHelper *URL);
 int GSM_AT(const __FlashStringHelper * ATCommand);
 int GSM_Response(int n) ;
 private:

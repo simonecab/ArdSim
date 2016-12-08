@@ -185,13 +185,8 @@ char  *GPS()
 
 int  get()
 {
-  if (  GSMSIM.GSM_AT(F("AT+HTTPPARA=\"CID\",1")) != GSMOK) return GSMERROR ;
-  if (  GSMSIM.GSM_AT(F("AT+HTTPPARA=\"URL\",\"http://184.73.165.170/b2bg/xxx.log\"")) != GSMOK) return GSMERROR ; \
 
-  GsmSerial.println(F("AT+HTTPACTION=0"));
-  GSMSIM.GSM_Response(2);
-
-  if (  GSMSIM.GSM_AT(F("AT+HTTPREAD=0,50")) != GSMOK) return GSMERROR ;
+GSMSIM.HTTP_get(8, 90, F("http://184.73.165.170/b2bg/xxx.log"));
 }
 
 void endGSM()
@@ -202,7 +197,7 @@ void endGSM()
 
 int  post(char *msg)
 {
-  int retry;
+
   char ScanBuffer[70];
 
   unsigned char c = 0 ;
@@ -213,36 +208,7 @@ int  post(char *msg)
   for (i = 0; i < 64; i++) c ^= ScanBuffer[i];
   ScanBuffer[64] = c;
 
-  
-  if (  GSMSIM.GSM_AT(F("AT+HTTPPARA=\"CID\",1")) != GSMOK) return GSMERROR ;
-  if (  GSMSIM.GSM_AT(F("AT+HTTPPARA=\"URL\",\"http://184.73.165.170/b2bg/xxx.php\"")) != GSMOK) return GSMERROR ; \
-
-  // PREPARE TO SEND POST PAYLOAD
-  GsmSerial.println(F("AT+HTTPDATA=65,10000"));
-
-  // WAIT "DOWNLOAD" REQUEST 
-  {
-    int i=0;
-    TmpBuffer[0]=0;
-    long int start = millis();
-    while( (millis()< (start + 500)) && !strstr(TmpBuffer,"DOWNLOAD"))
-    {
-      if(GsmSerial.available()) { TmpBuffer[i]=GsmSerial.read(); Serial.write(TmpBuffer[i]); i++ ; }
-    }
-  }
-
-  // SEND POST PAYLOAD 
-  GsmSerial.write(ScanBuffer, 65);
-
-  // WAIT "OK" DOWNLOAD
-  if ( GSMSIM.GSM_AT(F("")) != GSMOK) return GSMERROR ;
-
-  // DO POST
-  GsmSerial.println(F("AT+HTTPACTION=1"));
-  GSMSIM.GSM_Response(2);
-
-  // DO READ POST RETURNED BUFFER
-  if (  GSMSIM.GSM_AT(F("AT+HTTPREAD=0,50")) != GSMOK) return GSMERROR ;
+  GSMSIM.HTTP_post(ScanBuffer, 65, F("http://184.73.165.170/b2bg/xxx.php" ));
   Serial.println(TmpBuffer);
   if ((int) * (strstr(TmpBuffer, "#") + 1) != (int) ScanBuffer[64]) Serial.println("Disastro!\n"); else Serial.println("Successo!\n");
 }

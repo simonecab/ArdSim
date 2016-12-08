@@ -90,7 +90,7 @@ int GSMSIM::ConfGSM()
 
 	// retryCmd = 2;
 	// do {
-	// GsmSerial.println(F("AT+DNS=\"ftp.cabasino.com\""));
+	// m_gsmSerial.println(F("AT+DNS=\"ftp.cabasino.com\""));
 	// if (GSMOK != GSM_Response(3)) { --retryCmg; }
 	// if (!retryCmd) { return GSMERROR ; } ;
 
@@ -281,7 +281,7 @@ int GSMSIM::GSM_AT(const __FlashStringHelper * ATCommand)
 	long int start = millis();
 
 	ExtBuffer[0] = 0;
-	Serial.println(ATCommand);
+	//Serial.println(ATCommand);
 #ifdef GSM_2400BAUD_PATCH
     {int i=8; while (i--) m_gsmSerial.write(' '); }
 #endif
@@ -472,3 +472,69 @@ Serial.write(a=m_gsmSerial.read());
 //	}
 	Serial.println(F(">>"));
 }
+
+int  GSMSIM::HTTP_post(char *payload, int payloadSize, const __FlashStringHelper *URL)
+{
+  if ( GSM_AT(F("AT+HTTPPARA=\"CID\",1")) != GSMOK) return GSMERROR ;
+  m_gsmSerial.print(F("AT+HTTPPARA=\"URL\",\""));
+  m_gsmSerial.print(URL);
+  if ( GSM_AT(F("\"")) != GSMOK) return GSMERROR ;
+
+  // PREPARE TO SEND POST PAYLOAD
+  m_gsmSerial.print(F("AT+HTTPDATA="));
+  m_gsmSerial.print(payloadSize);
+  m_gsmSerial.println(F(",10000")); // TIMEOUT
+
+
+  // WAIT "DOWNLOAD" REQUEST
+  {
+    int i = 0;
+    ExtBuffer[0] = 0;
+    long int start = millis();
+    while ( (millis() < (start + 500)) && !strstr(ExtBuffer, "DOWNLOAD"))
+    {
+      if (m_gsmSerial.available()) {
+        ExtBuffer[i] = m_gsmSerial.read();
+        Serial.write(ExtBuffer[i]);
+        i++ ;
+      }
+    }
+  }
+
+  // SEND POST PAYLOAD
+  m_gsmSerial.write(payload, payloadSize);
+
+  // WAIT "OK" DOWNLOAD
+  if ( GSM_AT(F("")) != GSMOK) return GSMERROR ;
+
+  // DO POST
+  m_gsmSerial.println(F("AT+HTTPACTION=1"));
+  GSM_Response(2);
+
+  // DO READ POST RETURNED BUFFER
+  if (  GSM_AT(F("AT+HTTPREAD=0,50")) != GSMOK) return GSMERROR ;
+  return GSMOK;
+}
+
+int  GSMSIM::HTTP_get(int dataOffset, int dataSize, const __FlashStringHelper *URL)
+{
+  if ( GSM_AT(F("AT+HTTPPARA=\"CID\",1")) != GSMOK) return GSMERROR ;
+  m_gsmSerial.print(F("AT+HTTPPARA=\"URL\",\""));
+  m_gsmSerial.print(URL);
+  if ( GSM_AT(F("\"")) != GSMOK) return GSMERROR ;
+
+  // DO GET
+  m_gsmSerial.println(F("AT+HTTPACTION=0"));
+  GSM_Response(2);
+
+  // DO READ GET  RETURNED BUFFER
+    m_gsmSerial.print(F("AT+HTTPREAD="));
+	m_gsmSerial.print(dataOffset);
+	m_gsmSerial.print(",");
+	m_gsmSerial.print(dataSize);
+  if (  GSM_AT(F("")) != GSMOK) return GSMERROR ;
+  return GSMOK;
+}
+
+
+

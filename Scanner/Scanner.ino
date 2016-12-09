@@ -1,13 +1,12 @@
-#include <gsmsim.h>
-#include "PCF8574.h"
-
-
-#include <EEPROM.h>
+#include <gsmsim800.h>
 #include <Wire.h>
+#include "PCF8574.h"
+#include <EEPROM.h>
 #include <SoftwareSerial.h>
-#include <AltSoftSerial.h>
-char TmpBuffer[200];
+//#include <AltSoftSerial.h>
+#include <Eeprom24C04_16.h>
 
+char TmpBuffer[200];
 
 /////////////////////////////////////////
 // PIN DEFINITION
@@ -15,57 +14,25 @@ char TmpBuffer[200];
 #define SCANNER_RX  4        //can be disconnected to TX of the Serial MP3 Player module
 #define SCANNER_TX  12        //connect to RX of the module
 
-#define GPS_RX    6         // (was 6) connect to TX of module 
-#define GPS_TX    7         // (was 7)connect to RX of module
+#define GSM_RX    8
+#define GSM_TX    9
+#define GSM_BOOT_PIN  3
 
-// PIN POWER NEOWAY 2 e 4 CONNECTED TO ARDUINO 5V e GND congigui (2to5V  4toGND)
-// PIN POWER CEPRI  4 e 2 CONNECTED TO ARDUINO 5V e GND congigui (2toGND 4toVCC)
-#define GSM_RX    8      // CEPRI PIN 9   : NEOWAY PIN 14  : ITRUKG  PIN T
-#define GSM_TX    9      // CEPRI PIN 10  : NEOWAY PIN 16  : ITRUKG  PIN R
-#define GSM_BOOT_PIN  3       // Neoway M590 boot pin if available : CEPRI PIN 14 : NEOWAY PIN 19 : ITRUKG  PIN K
-// #define GSM_BOOT_PIN  -1   // if Neoway M590 boot pin NOT available
-
-#define LEDSTRIPPIN   5   // RGB LED Strip
 #define LEDPIN        13  // default arduino LED
-#define VOLTINPIN     1   // Analog input connected to intermediate battery (less than 5v)
-
-#define BUTTONPIN     2
-
-
-SoftwareSerial ScannerSerial(SCANNER_RX, SCANNER_TX);
-/////////////////////////////////////////
-// PCF8574
-/////////////////////////////////////////
-
-PCF8574 PCF8574(0x20);
-
-
-/////////////////////////////////////////
-// RGB DEFINITIONS
-/////////////////////////////////////////
-#include <Adafruit_NeoPixel.h>
-Adafruit_NeoPixel LedStrip = Adafruit_NeoPixel(4, LEDSTRIPPIN, NEO_GRB + NEO_KHZ800);
-
-
-/////////////////////////////////////////
-// GPS DEFINITIONS
-/////////////////////////////////////////
-#include <TinyGPS.h>
-//SoftwareSerial GpsSerial(GPS_RX, GPS_TX); // RX, TX GPS
-SoftwareSerial GpsSerial(11, GPS_TX); // RX, TX DISABLE GPS
-TinyGPS Gps;
 
 
 /////////////////////////////////////////
 // GSM/FTP DEFINITION AND SETUP
 /////////////////////////////////////////
-//SoftwareSerial GsmSerial(GSM_RX, GSM_TX); // RX, TX GSM
-AltSoftSerial GsmSerial;
+SoftwareSerial GsmSerial(GSM_RX, GSM_TX); // RX, TX GSM
+//AltSoftSerial GsmSerial;
 GSMSIM GSMSIM(GSM_BOOT_PIN, TmpBuffer, sizeof(TmpBuffer),  GsmSerial);
 
 
-
-
+/////////////////////////////////////////
+// PCF8574 DEFINITION
+/////////////////////////////////////////
+PCF8574 PCF(0x20);
 
 
 
@@ -74,25 +41,15 @@ GSMSIM GSMSIM(GSM_BOOT_PIN, TmpBuffer, sizeof(TmpBuffer),  GsmSerial);
 /////////////////////////////////////////
 #define UPDATETIMEFINAL 600     // Final update interval 
 #define UPDATETIMEINITIAL 60;   // initial update interval
-int MFile = 1; // id file multipli
+
 long int NextConnectionTime = 15;
 
-#define  IRQ_ACT 4
-#define REDUCE_LED 1
-#define GPS_LOG 2
-volatile int option = REDUCE_LED;
+/////////////////////////////////////////
+// EEPROM24C04 DEFINITION
+/////////////////////////////////////////
+#define EEPROM_ADDRESS 0x50
+static Eeprom24C04_16 eeprom(EEPROM_ADDRESS);
 
-
-#define HUNKNOWN 0
-#define HERROR -1
-#define HOK 1
-#define HPERFECT 2
-int Happy = HUNKNOWN;
-
-
-#define BLINK_FAST 40
-#define BLINK_NORM 300
-#define BLINK_SLOW 800
 
 
 
@@ -108,46 +65,50 @@ void setup()
   //***************************************
   //SETUP GSM
   //***************************************
-  GsmSerial.begin(4800);
+  GsmSerial.begin(19200);
+  GsmSerial.listen();
+  boot();
+
+
 
   //***************************************
-  //SETUP SCANNER
+  //SETUP GPIO CONTROLLER
   //***************************************
-  ScannerSerial.begin(57600);
+  Serial.print ("TEST PCF8574 ... ");
 
+  PCF.write8(0x0);
+  if(PCF.read8() != 0) Serial.println("PCF error reading 0");
+  PCF.write(4, 1); delay(100);
+  if(PCF.read8() != 16) Serial.println("PCF error reading 16");
+  // while (1) { PCF.write8(0x0); delay(2500);   Serial.println(PCF.read8(),HEX); PCF.write8(0xFF); delay(2500);   Serial.println(PCF.read8(),HEX);}
+  Serial.println("  COMPLETED");
 
-  //***************************************
-  //SETUP AND TEST GPS
-  //***************************************
-  GpsSerial.begin(9600);
-
-
-  GpsSerial.flush();
-
-
-  //GpsSerial.listen();
-  delay(500);
-  i = 0;
-  TmpBuffer[0] = 0;
-  TmpBuffer[1] = 0;
-  if (GpsSerial.available()) while (millis() < 10000 && i < 190)
-      while (GpsSerial.available())
-      {
-        TmpBuffer[i] = GpsSerial.read();
-        //Serial.print(TmpBuffer[i]);
-        if (TmpBuffer[0] == '$') {
-          i++;
-          if (TmpBuffer[1] == 'G') break;
-        }
-      }
-  if (!strncmp(TmpBuffer, "$G", 2))Serial.println(F("GPS TEST PASSED"));
-  else Serial.println(F("GPS TIMEOUT"));
 
   //***************************************
-  //SETUP RGB LED STRIP
+  //EEPROM
   //***************************************
-  LedStrip.begin();
-  LedStrip.show(); // Initialize all pixels to 'off'
+  Serial.print("TEST EEPROM ... ");
+  eeprom.initialize();
+  for (i = 0; i < 100; i++)
+  {
+    TmpBuffer[i] = 0;
+  }
+  eeprom.writeBytes(0, 100, (byte *) TmpBuffer);
+  eeprom.readBytes(0, 100, (byte *) TmpBuffer);
+  for (i = 0; i < 100; i++)
+  {
+    if (TmpBuffer[i]) {
+      Serial.println("Eeprom zeroing error");
+      break;
+    }
+  }
+  Serial.print("ZEROED ... ");
+
+  eeprom.writeByte(4, 0x37);     delay(100);
+  eeprom.writeByte(31, 0x53);    delay(100);
+
+  if (eeprom.readByte(4) != 0x37 ||  eeprom.readByte(31) != 0x53)  Serial.println("Eeprom Error");
+  else   Serial.println(" COMPLETED");
 
 
   //***************************************
@@ -159,118 +120,39 @@ void setup()
 
 
   //***************************************
-  //SETUP PCF8574
-  //***************************************
-#ifdef topo
-  Wire.begin();
-while(1)
-{
-  Wire.requestFrom(0x20, 1);
-   delay(10);
-  if (Wire.available())    //If the request is available
-   {
-      int x;
-      x = Wire.read();     //Receive the data
-      Serial.println("---->");
-      Serial.println(x, HEX);
-      delay(2000);
-    }
-}
-#endif
-#ifndef PCF8574_PRESENT
-  Serial.println("PCF---->");
-  while (1)
-  {
-    //for (i = 0; i < 7; i++) PCF8574.write(i, 1);
-    delay (200);
-   // for (i = 0; i < 7; i++) PCF8574.write(i, 1);
-    delay (200);
-    //for (i = 0; i < 7; i++) PCF8574.write(i, 1);
-    delay (200);
-    for (i = 0; i < 7; i++) PCF8574.write(i, 1);
-    delay (200);
-  
-  Serial.println("0 1 2 3 4" );  
-    Serial.println(PCF8574.read(0));
-  Serial.println(PCF8574.read(1));
-  Serial.println(PCF8574.read(2));
-  Serial.println(PCF8574.read(3));
- Serial.println(PCF8574.read(4));
-  }
-#endif
-  /* for (int i=0; i<8; i++)
-    {
-    PCF.toggle(i);
-    delay(100);
-    PCF.toggle(i);
-    delay(100);
-    }
-  */
-
-  pinMode(BUTTONPIN, INPUT_PULLUP);
-  attachInterrupt(digitalPinToInterrupt(BUTTONPIN), Test, FALLING  );
-
-
-
-  //***************************************
   //END SETUP
   //***************************************
 
   printHelp();
-  // GpsSerial.listen();
+
 
 }
 void printHelp()
 {
-  Serial.print(F("\n.AT cmd, h(alt), s(scanner), p(ut), l(ogin), g(ps_status), G(PS log)\
-  \nr(eadFtp), b(oot), c(onf_gsm), s(tatus), t(est), R(ead), S(end)\n"));
+  Serial.print(F("\n.AT cmd, h(alt), p(ost),  g(et), G(PS log), b(oot), \n"));
   Serial.println(F("cmd# "));
 }
 
 
 void loop() // run over and over
 {
-  //////////////////////////////////////////////////////
-  // GPS PROCESSING
-  //////////////////////////////////////////////////////
-
-  if (GpsSerial.available())
-  {
-    char c;
-    c = GpsSerial.read();
-    Gps.encode(c);
-    if (option & GPS_LOG) Serial.print(c);
-  }
 
 
-  if (option & IRQ_ACT) {
-    Serial.print("IRQ!!");
-    option &= ~IRQ_ACT;
-  }
   //////////////////////////////////////////////////////
   // CONSOLE COMMAND PROCESSING
   //////////////////////////////////////////////////////
   if (Serial.available())
   {
-
-    ScannerSerial.listen();
+    GsmSerial.listen();
     char a = Serial.read();
     switch (a)
     {
-      case 'p': PutFTPGps(GSMOK);  break;
-      case 'l': GSMSIM.LoginFTP();  break;
-      case 'c': GSMSIM.ConfGSM();  break;
-      case 's': Scanner();  break;
-      case 'b': GSMSIM.BootGSM();  break;
-      case 'g': PutFTPGps(GSMUNKNOWN);  break;
-      case 'h': Serial.println(F("send ogni ora")); printHelp(); NextConnectionTime = 3600000; option ^= REDUCE_LED; break;
-      case 'r': Serial.println(GSMSIM.ReadFTP("command.txt")); break;
-      case 'R': Serial.println(GSMSIM.ReadSMS()); Serial.println(TmpBuffer); break;
-      case 't': Test(); break;
-      case 'S': GSMSIM.SendSMS("3296315064", "ciao bongo");  break;
-      case 'G': option ^= GPS_LOG; break;
       case '.': GSMSIM.ProxyGSM();  break;
-
+      case 'b': boot(); break;
+      case 'e': endGSM(); break;
+      case 'g': get(); break;
+      case 'G': Serial.println(GPS()); break;
+      case 'p': post("SCANID1,  SEQN,TIME,Lat,Lon"); break;
       default: printHelp();
 
 
@@ -282,158 +164,84 @@ void loop() // run over and over
     }
 
     Serial.println(F("cmd# "));
-    //  GpsSerial.listen();
+
   }
 
-  //////////////////////////////////////////////////////
-  // FTP PERIODIC PROCESSING
-  //////////////////////////////////////////////////////
-
-  if ((millis() / 1000) > NextConnectionTime) {
-    //      GsmSerial.listen();
-    long int now = millis() / 1000;
-
-    if (NextConnectionTime < UPDATETIMEFINAL)
-    {
-      NextConnectionTime = now + UPDATETIMEINITIAL ;
-    }
-    else
-    {
-      NextConnectionTime = now + UPDATETIMEFINAL;
-    }
-
-    blink(2, BLINK_FAST);
-
-
-    Happy = HUNKNOWN;
-    colorWipe(LedStrip.Color(255, 255, 255), 50); // white
-    blink(2, BLINK_FAST);
-    if ( GSMSIM.BootGSM() != GSMOK) {
-      Happy = HERROR;
-      return;
-    }
-    if ( GSMSIM.ConfGSM() != GSMOK) {
-      Happy = HERROR;
-      GSMSIM.PowerOffGSM();
-      NextConnectionTime = (millis() / 1000) + UPDATETIMEINITIAL;
-      return;
-    }
-    colorWipe(LedStrip.Color(255, 0, 255), 50); // Blue
-    if ( GSMSIM.LoginFTP() != GSMOK) {
-      Happy = HERROR;
-      GSMSIM.PowerOffGSM();
-      NextConnectionTime = (millis() / 1000) + UPDATETIMEINITIAL;
-      return;
-    }
-    blink(2, BLINK_FAST);
-    colorWipe(LedStrip.Color(0, 0, 255), 50); // Blue
-    if ( PutFTPGps(1) != GSMOK) {
-      Happy = HERROR;
-      GSMSIM.PowerOffGSM();
-      NextConnectionTime = (millis() / 1000) + UPDATETIMEINITIAL;
-      return;
-    }
-
-    Happy = HPERFECT;
-    GSMSIM.PowerOffGSM();
-    Serial.print("Now: "); Serial.print(millis() / 1000); Serial.print(" next "); Serial.println(NextConnectionTime);
-
-    Serial.println(F("cmd# "));
-    //GpsSerial.listen();
-  }
-
-
-
-  //////////////////////////////////////////////////////
-  // MESSAGE PERIODIC PROCESSING
-  //////////////////////////////////////////////////////
-  if ((!((millis() / 1000) % 3)))
-  {
-    switch (Happy)
-    {
-      case HERROR:   colorWipe(LedStrip.Color(255, 0,   0),   50); blink(1, BLINK_SLOW); break; // red
-      case HUNKNOWN: colorWipe(LedStrip.Color(100, 100, 100), 50); break;// white
-      case HPERFECT: colorWipe(LedStrip.Color(0,   255, 0),   50); blink(1, BLINK_FAST); break; // green
-      case HOK:      colorWipe(LedStrip.Color(0,   0,   255), 50); blink(1, BLINK_FAST); break; // blue
-      default:       colorWipe(LedStrip.Color(255, 255, 0),   50); break;// yellow
-    }
-    // GpsSerial.listen();
-  }
 
 }//end loop
 
 
+int  boot()
+{
+  int retry;
+  if ( GSMSIM.GSM_AT(F("AT+CREG?")) != GSMOK) return GSMERROR ;
+  if ( GSMSIM.GSM_AT(F("AT+CSQ")) != GSMOK) return GSMERROR ;
+  do {
+    if ( GSMSIM.GSM_AT(F("AT+CGATT?")) != GSMOK) return GSMERROR ;
+    delay(500);
+  } while (!strstr(TmpBuffer, "1"));
+
+  if ( GSMSIM.GSM_AT(F("AT+SAPBR=3,1,\"Contype\",\"GPRS\"")) != GSMOK) return GSMERROR ;
+  if ( GSMSIM.GSM_AT(F("AT+SAPBR=3,1,\"APN\",\"ibox.tim.it\"")) != GSMOK) return GSMERROR ;
+  if ( GSMSIM.GSM_AT(F("AT+CGNSPWR=1")) != GSMOK) return GSMERROR ;
+
+  retry = 5;
 
 
-//////////////////////////////////////////////////////
-// PUT VIA FTP GPS INFO
-//////////////////////////////////////////////////////
-long lat, lon;
+  if ( GSMSIM.GSM_AT(F("AT+SAPBR=2,1")) != GSMOK) return GSMERROR ;
+  if (strstr(TmpBuffer, "0.0.0.0"))
+  {
+    while (--retry &&  ( GSMSIM.GSM_AT(F("AT+SAPBR=1,1")) != GSMOK))delay(2000);
+    if (!retry)return GSMERROR ;
+    if (  GSMSIM.GSM_AT(F("AT+HTTPINIT")) != GSMOK) return GSMERROR ;
+  }
 
-unsigned long fix_age, gpsTime, date, speed, course;
 
-unsigned long chars;
-unsigned short sentences, failed_checksum;
-int PutFTPGps(int transmit)
+
+  //endGSM();
+
+}
+
+char  *GPS()
 {
 
-  char text[100];
-  char file[40];
+  GsmSerial.println(F("AT+CGNSINF"));
+  GSMSIM.GSM_Response(2);
+
+  return TmpBuffer + 10;
+}
+
+
+int  get()
+{
+
+  GSMSIM.HTTP_get(8, 90, F("http://184.73.165.170/b2bg/xxx.log"));
+}
+
+void endGSM()
+{
+  GSMSIM.GSM_AT(F("AT+HTTPTERM")) ;
+  GSMSIM.GSM_AT(F("AT+SAPBR=0,1")) ;
+}
+
+int  post(char *msg)
+{
+
+  char ScanBuffer[70];
+
+  unsigned char c = 0 ;
   int i;
-  int  gpsHdop, gpsSat;
-  unsigned long chars;
-  unsigned short sentences, failed_checksum;
-  int Volt = analogRead(VOLTINPIN);
+  for (i = 0; i < 64; i++) ScanBuffer[i] = 0;
+  strcpy(ScanBuffer, msg);
 
-  Gps.stats(&chars, &sentences, &failed_checksum);
-  Gps.get_position(&lat, &lon, &fix_age);
-  Gps.get_datetime(&date, &gpsTime, &fix_age);
+  for (i = 0; i < 64; i++) c ^= ScanBuffer[i];
+  ScanBuffer[64] = c;
 
-  Serial.print(F("Chars: "));  Serial.print(chars);
-  Serial.print(F(" Fix: "));   Serial.print(sentences);
-  Serial.print(F(" Fail: "));  Serial.println(failed_checksum);
-  Serial.print(F("Time: "));   Serial.println(gpsTime);
-
-
-  if (fix_age == 4294967295 )
-  {
-    Serial.println(F("NO Gps FIX"));
-  } else {
-    Serial.println(F("fix lat lon"));
-    Serial.println(fix_age);
-    Serial.println(lat);
-    Serial.println(lon);
-  }
-
-  Serial.print(F("sat = "));
-  Serial.println(gpsSat = Gps.satellites());
-  Serial.print(F("HDOP= "));
-  Serial.println(gpsHdop = Gps.hdop());
-
-
-  sprintf(text, "< S = %3d/%4d %9ld %9ld %9ld V3=%04d E=%ld >", gpsSat, gpsHdop, lat, lon, gpsTime + 2000000, Volt, GSMErrors  );
-  sprintf(file, "test%04d.txt", MFile++);
-  if (transmit)
-    return GSMSIM.PutFTP( file, text);
-  else
-    return GSMOK;
+  GSMSIM.HTTP_post(ScanBuffer, 65, F("http://184.73.165.170/b2bg/xxx.php" ));
+  Serial.println(TmpBuffer);
+  if ((int) * (strstr(TmpBuffer, "#") + 1) != (int) ScanBuffer[64]) Serial.println("Disastro!\n"); else Serial.println("Successo!\n");
 }
 
-void Test()
-{
-
-  option |=  IRQ_ACT;
-}
-
-void Scanner()
-{
-  Serial.println("reading, x to stop...");
-  while (Serial.read() != 'x')
-  {
-    if (ScannerSerial.available()) Serial.write(ScannerSerial.read());
-
-  }
-}
 
 
 

@@ -31,15 +31,6 @@ unsigned int EEPROMReadInt(int p_address)
      return ((lowByte << 0) & 0xFF) + ((highByte << 8) & 0xFF00);
      }
 
-void setup()
-     {
-     Serial.begin(9600);
-     
-     EEPROMWriteInt(0, 0xABCD);
-     
-     Serial.print("Read the following int at the eeprom address 0: ");
-     Serial.println(EEPROMReadInt(0), HEX);
-     }
 
 
 int freeRam ()
@@ -50,18 +41,4 @@ int freeRam ()
 }
 #endif
 
-//////////////////////////////
-// ON BOARD LED
-/////////////////////////////
-void blink(int tempo, int velocita)
-{
-  long int start = millis();
-  while (millis() < (start + 1000 * (long int)tempo))
-  {
-    digitalWrite(LEDPIN, HIGH);   // turn the LED on (HIGH is the voltage level)
-    delay( velocita);            // wait for a time
-    digitalWrite(LEDPIN, LOW);    // turn the LED off by making the voltage LOW
-    delay( velocita);
-  }
-}
 

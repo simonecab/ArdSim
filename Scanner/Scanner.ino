@@ -11,14 +11,24 @@ char TmpBuffer[200];
 /////////////////////////////////////////
 // PIN DEFINITION
 /////////////////////////////////////////
-#define SCANNER_RX  4        //can be disconnected to TX of the Serial MP3 Player module
-#define SCANNER_TX  12        //connect to RX of the module
+#define SCANNER_TX      3
+#define SCANNER_RX      4
+#define SCANNER_AIM     12
+#define SCANNER_TRIGGER 13
+#define SCANNER_PWRDOWN 5
+
+#define SCAN_BUTTON     2
 
 #define GSM_RX    8
 #define GSM_TX    9
-#define GSM_BOOT_PIN  3
+#define GSM_BOOT_PIN  10
 
-#define LEDPIN        13  // default arduino LED
+
+// AltSoftSerial - Can be sensitive to interrupt usage by other libraries.
+// SoftwareSerial Can have multiple instances on almost any pins, but only 1 can be active at a time.
+//               Can interfere with other libraries or HardwareSerial if used at slower baud rates.
+//               Can be sensitive to interrupt usage by other libraries.
+// see also: https://www.pjrc.com/teensy/td_libs_AltSoftSerial.html
 
 
 /////////////////////////////////////////
@@ -33,7 +43,6 @@ GSMSIM GSMSIM(GSM_BOOT_PIN, TmpBuffer, sizeof(TmpBuffer),  GsmSerial);
 // PCF8574 DEFINITION
 /////////////////////////////////////////
 PCF8574 PCF(0x20);
-
 
 
 /////////////////////////////////////////
@@ -62,13 +71,25 @@ void setup()
   int i;
   Serial.begin(9600);
 
+
+  //***************************************
+  //SETUP PIN
+  //***************************************
+
+  pinMode(SCANNER_AIM, OUTPUT);
+  pinMode(SCANNER_TRIGGER, OUTPUT);
+  pinMode(SCANNER_PWRDOWN, INPUT);
+  pinMode(SCAN_BUTTON, OUTPUT);
+  pinMode(GSM_BOOT_PIN, OUTPUT);
+
+
+
   //***************************************
   //SETUP GSM
   //***************************************
   GsmSerial.begin(19200);
   GsmSerial.listen();
-  boot();
-
+  GSMSIM.BootGSM();
 
 
   //***************************************
@@ -77,9 +98,9 @@ void setup()
   Serial.print ("TEST PCF8574 ... ");
 
   PCF.write8(0x0);
-  if(PCF.read8() != 0) Serial.println("PCF error reading 0");
+  if (PCF.read8() != 0) Serial.println("PCF error reading 0");
   PCF.write(4, 1); delay(100);
-  if(PCF.read8() != 16) Serial.println("PCF error reading 16");
+  if (PCF.read8() != 16) Serial.println("PCF error reading 16");
   // while (1) { PCF.write8(0x0); delay(2500);   Serial.println(PCF.read8(),HEX); PCF.write8(0xFF); delay(2500);   Serial.println(PCF.read8(),HEX);}
   Serial.println("  COMPLETED");
 
@@ -87,36 +108,29 @@ void setup()
   //***************************************
   //EEPROM
   //***************************************
-  Serial.print("TEST EEPROM ... ");
+  Serial.print("TEST EXTERNAL EEPROM ... ");
   eeprom.initialize();
+  eeprom.writeByte(4, 0x37);     delay(100);
+  eeprom.writeByte(31, 0x53);    delay(100);
+  if (eeprom.readByte(4) != 0x37 ||  eeprom.readByte(31) != 0x53)  Serial.println("Eeprom Error 1");
+  for (i = 0; i < 100; i++)    TmpBuffer[i] = i;
+  eeprom.writeBytes(0, 100, (byte *) TmpBuffer);
+  eeprom.readBytes(0, 100, (byte *) TmpBuffer + 1);
   for (i = 0; i < 100; i++)
   {
+    if (TmpBuffer[i + 1] != i) {
+      Serial.println("Eeprom  error 2");
+      break;
+    }
     TmpBuffer[i] = 0;
   }
   eeprom.writeBytes(0, 100, (byte *) TmpBuffer);
-  eeprom.readBytes(0, 100, (byte *) TmpBuffer);
-  for (i = 0; i < 100; i++)
-  {
-    if (TmpBuffer[i]) {
-      Serial.println("Eeprom zeroing error");
-      break;
-    }
-  }
+
   Serial.print("ZEROED ... ");
 
-  eeprom.writeByte(4, 0x37);     delay(100);
-  eeprom.writeByte(31, 0x53);    delay(100);
 
-  if (eeprom.readByte(4) != 0x37 ||  eeprom.readByte(31) != 0x53)  Serial.println("Eeprom Error");
-  else   Serial.println(" COMPLETED");
+  Serial.println(" COMPLETED");
 
-
-  //***************************************
-  //SETUP ON BOARD LED
-  //***************************************
-
-  pinMode(LEDPIN, OUTPUT);
-  //blink(10, BLINK_FAST);   //blink(10, BLINK_NORM); //SECONDI DI BLINK  e VELOCITA'
 
 
   //***************************************
@@ -126,10 +140,17 @@ void setup()
   printHelp();
 
 
+  // TEST ONLY
+  pinMode(6, INPUT_PULLUP);
+
+
+
+
 }
+
 void printHelp()
 {
-  Serial.print(F("\n.AT cmd, h(alt), p(ost),  g(et), G(PS log), b(oot), \n"));
+  Serial.print(F("\n.AT cmd, p(ost),  g(et), G(PS log), b(oot), \n"));
   Serial.println(F("cmd# "));
 }
 
@@ -138,9 +159,19 @@ void loop() // run over and over
 {
 
 
+  // TEST ONLY
+  if (!digitalRead(6)) {
+    Serial.println("SCANNNN!");
+    delay(500);
+  }
+
+
+
   //////////////////////////////////////////////////////
   // CONSOLE COMMAND PROCESSING
   //////////////////////////////////////////////////////
+
+
   if (Serial.available())
   {
     GsmSerial.listen();
@@ -148,85 +179,62 @@ void loop() // run over and over
     switch (a)
     {
       case '.': GSMSIM.ProxyGSM();  break;
-      case 'b': boot(); break;
-      case 'e': endGSM(); break;
+      case 'b': GSMSIM.BootGSM(); break;
       case 'g': get(); break;
-      case 'G': Serial.println(GPS()); break;
+      case 'G': GPS(); break;
       case 'p': post("SCANID1,  SEQN,TIME,Lat,Lon"); break;
       default: printHelp();
-
-
     }
-    {
+    { //per svuotare il buffer di input
       long int start = millis();
       while (millis() < start + 200)
         if (Serial.available()) Serial.read();
     }
 
     Serial.println(F("cmd# "));
-
   }
-
-
 }//end loop
 
 
-int  boot()
+void GPS()
 {
-  int retry;
-  if ( GSMSIM.GSM_AT(F("AT+CREG?")) != GSMOK) return GSMERROR ;
-  if ( GSMSIM.GSM_AT(F("AT+CSQ")) != GSMOK) return GSMERROR ;
-  do {
-    if ( GSMSIM.GSM_AT(F("AT+CGATT?")) != GSMOK) return GSMERROR ;
-    delay(500);
-  } while (!strstr(TmpBuffer, "1"));
-
-  if ( GSMSIM.GSM_AT(F("AT+SAPBR=3,1,\"Contype\",\"GPRS\"")) != GSMOK) return GSMERROR ;
-  if ( GSMSIM.GSM_AT(F("AT+SAPBR=3,1,\"APN\",\"ibox.tim.it\"")) != GSMOK) return GSMERROR ;
-  if ( GSMSIM.GSM_AT(F("AT+CGNSPWR=1")) != GSMOK) return GSMERROR ;
-
-  retry = 5;
-
-
-  if ( GSMSIM.GSM_AT(F("AT+SAPBR=2,1")) != GSMOK) return GSMERROR ;
-  if (strstr(TmpBuffer, "0.0.0.0"))
-  {
-    while (--retry &&  ( GSMSIM.GSM_AT(F("AT+SAPBR=1,1")) != GSMOK))delay(2000);
-    if (!retry)return GSMERROR ;
-    if (  GSMSIM.GSM_AT(F("AT+HTTPINIT")) != GSMOK) return GSMERROR ;
-  }
-
-
-
-  //endGSM();
-
-}
-
-char  *GPS()
-{
-
   GsmSerial.println(F("AT+CGNSINF"));
   GSMSIM.GSM_Response(2);
+  Serial.println(TmpBuffer);
+  strtok(TmpBuffer, ",");
+  Serial.println(strtok(0, ","));// fix
+  Serial.println(strtok(0, "."));// time stamp
+  (strtok(0, ","));
+  Serial.println(strtok(0, ","));// lat
+  Serial.println(strtok(0, ","));// lon
+  Serial.println(strtok(0, ","));// alt
+    Serial.println("speed course mode" );
+  Serial.println(strtok(0, ",")); // speed
+  Serial.println(strtok(0, ",")); // course
+  Serial.println(strtok(0, ",")); // mode
 
-  return TmpBuffer + 10;
+  Serial.println("3 DOP" );
+  Serial.println(strtok(0, ",")); //HDOP
+  Serial.println(strtok(0, ",")); //PDOP
+  Serial.println(strtok(0, ",")); //VDOP
+  Serial.println("SAT VIEW, USED");
+  Serial.println(strtok(0, ",")); 
+  Serial.println(strtok(0, ",")); 
+  Serial.println("END");
+
+
 }
 
 
 int  get()
 {
-
   GSMSIM.HTTP_get(8, 90, F("http://184.73.165.170/b2bg/xxx.log"));
+  Serial.println(TmpBuffer);
 }
 
-void endGSM()
-{
-  GSMSIM.GSM_AT(F("AT+HTTPTERM")) ;
-  GSMSIM.GSM_AT(F("AT+SAPBR=0,1")) ;
-}
 
 int  post(char *msg)
 {
-
   char ScanBuffer[70];
 
   unsigned char c = 0 ;

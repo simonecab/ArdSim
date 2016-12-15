@@ -150,7 +150,7 @@ void setup()
 
 void printHelp()
 {
-  Serial.print(F("\n.AT cmd, p(ost),  g(et), G(PS log), b(oot), \n"));
+  Serial.print(F("\n.AT cmd, p(ost),  g(et), G(PS log), b(oot), f(fun=0)\n"));
   Serial.println(F("cmd# "));
 }
 
@@ -182,6 +182,7 @@ void loop() // run over and over
       case 'b': GSMSIM.BootGSM(); break;
       case 'g': get(); break;
       case 'G': GPS(); break;
+      case 'f': Serial.println(F("low function"));GSMSIM.ConfGSM(0); break;
       case 'p': post("SCANID1,  SEQN,TIME,Lat,Lon"); break;
       default: printHelp();
     }

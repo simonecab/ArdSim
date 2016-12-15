@@ -30,7 +30,7 @@ Stream& m_gsmSerial;
 public:
 GSMSIM(int BOOT, char *TmpBuffer, int TmpBuffersize, Stream& m_gsmSerial);
 void SetupGSM();
-int  ConfGSM();
+int  ConfGSM(int cfun);
 int  ReadSMS();
 int  DeleteAllSMS();
 int  LoginFTP();

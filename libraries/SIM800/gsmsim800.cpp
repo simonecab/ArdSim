@@ -39,12 +39,19 @@ GSMSIM::GSMSIM(int BOOT_PIN, char*buffer, int ExtBufferSize, Stream& S)
 }
 
 //////////////////////////////////////////////////////
-// CONFIGURE GSM FOR IP AFTER BOOT
+// CONFIGURE GSM CFUN
 ////////////////////////////////////////////////////////
-int GSMSIM::ConfGSM()
+int GSMSIM::ConfGSM(int cfun)
 {
-
-  return GSMOK;
+if(cfun!=0)
+{
+    if ( GSM_AT(F("AT+CFUN=1")) != GSMOK) return GSMERROR ;
+}
+else
+{
+	if ( GSM_AT(F("AT+CFUN=0")) != GSMOK) return GSMERROR ;
+}
+return GSMOK;
 
 }
 
@@ -113,12 +120,7 @@ int GSMSIM::GSM_AT(const __FlashStringHelper * ATCommand)
 
   ExtBuffer[0] = 0;
   Serial.println(ATCommand);
-#ifdef GSM_2400BAUD_PATCH
-  {
-    int i = 8;
-    while (i--) m_gsmSerial.write(' ');
-  }
-#endif
+
   m_gsmSerial.println(ATCommand);
   while ((millis() < (start + 6000)) && (done == GSMUNKNOWN))
   {
@@ -245,7 +247,7 @@ int GSMSIM::BootGSM()
   int retry = 3;
 
   if (! ExtBuffer ) Serial.println(F("Error: Ext Buffer size too small"));
-
+    if ( GSM_AT(F("AT+CFUN=1")) != GSMOK) return GSMERROR ;
     if ( GSM_AT(F("AT+CREG?")) != GSMOK) return GSMERROR ;
     if ( GSM_AT(F("AT+CSQ")) != GSMOK) return GSMERROR ;
     do {

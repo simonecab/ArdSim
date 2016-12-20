@@ -119,7 +119,7 @@ int GSMSIM::GSM_AT(const __FlashStringHelper * ATCommand)
   long int start = millis();
 
   ExtBuffer[0] = 0;
-  Serial.println(ATCommand);
+ // Serial.println(ATCommand);
 
   m_gsmSerial.println(ATCommand);
   while ((millis() < (start + 6000)) && (done == GSMUNKNOWN))
@@ -139,7 +139,7 @@ int GSMSIM::GSM_AT(const __FlashStringHelper * ATCommand)
     if (done == GSMUNKNOWN)  Serial.println(F(" TIMEOUT, BOOT? "));
     GSMErrors++;
   }
-  //Serial.print(ExtBuffer);
+  Serial.print(ExtBuffer);
   //Serial.println("");
   start = millis();
   while (millis() < start + 50) if (m_gsmSerial.available()) {
@@ -161,13 +161,13 @@ int GSMSIM::GSM_Response(int n)  {
     if (m_gsmSerial.available())
     {
       a = m_gsmSerial.read();
-      //Serial.write(a);
+      Serial.write(a);
 
       if (a == '+') {
         pcnt++;
         if (pcnt == n)  {
           start = millis();
-          timeout = 500;
+          timeout = 2000;
         }
       }
       ExtBuffer[i] = a;
@@ -241,7 +241,7 @@ void GSMSIM::PowerOffGSM()
 
 ////////////////////////////////////////////////////
 
-int GSMSIM::BootGSM()
+int GSMSIM::BootGSM(char *imei)
 {
   long int start;
   int retry = 3;
@@ -267,9 +267,12 @@ int GSMSIM::BootGSM()
     {
       while (--retry &&  ( GSM_AT(F("AT+SAPBR=1,1")) != GSMOK))delay(2000);
       if (!retry)return GSMERROR ;
-      if (  GSM_AT(F("AT+HTTPINIT")) != GSMOK) return GSMERROR ;
+      if ( GSM_AT(F("AT+HTTPINIT")) != GSMOK) return GSMERROR ;
+	  if ( GSM_AT(F("AT+SAPBR=2,1")) != GSMOK) return GSMERROR ;
     }
 
+    if ( GSM_AT(F("AT+GSN")) != GSMOK) return GSMERROR ;
+	strncpy(imei,ExtBuffer+9,15);
 }
 
 void GSMSIM::ProxyGSM()
@@ -307,7 +310,8 @@ int  GSMSIM::HTTP_post(char *payload, int payloadSize, const __FlashStringHelper
   if ( GSM_AT(F("AT+HTTPPARA=\"CID\",1")) != GSMOK) return GSMERROR ;
   m_gsmSerial.print(F("AT+HTTPPARA=\"URL\",\""));
   m_gsmSerial.print(URL);
-  if ( GSM_AT(F("\"")) != GSMOK) return GSMERROR ;
+  m_gsmSerial.print("\"");
+  if ( GSM_AT(F("")) != GSMOK) return GSMERROR ;
 
   // PREPARE TO SEND POST PAYLOAD
   m_gsmSerial.print(F("AT+HTTPDATA="));

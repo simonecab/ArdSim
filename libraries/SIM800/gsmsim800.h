@@ -39,7 +39,7 @@ int  PutFTP(const char *file, char *obuf);
 char *ReadFTP(char *filename);
 void SendSMS(char *number, char* message);
 void PowerOffGSM();
-int  BootGSM();
+int  BootGSM(char *imei);
 void ProxyGSM();
 int  HTTP_post(char *payload, int payloadSize, const __FlashStringHelper *URL);
 int  HTTP_get(int dataOffset, int dataSize, const __FlashStringHelper *URL);

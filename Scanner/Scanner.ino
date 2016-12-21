@@ -208,7 +208,12 @@ void printHelp()
 void loop() // run over and over
 {
 
-  if (!digitalRead(SCAN_BUTTON))scan(0);
+  if (!digitalRead(SCAN_BUTTON))
+  {
+    delay (10);
+    if (!digitalRead(SCAN_BUTTON)) scan(0);
+  }
+
 
   //////////////////////////////////////////////////////
   // CONSOLE COMMAND PROCESSING
@@ -239,6 +244,8 @@ void loop() // run over and over
     Serial.println(F("cmd# "));
   }
   if ((millis() % 20000) == 0) {
+    Serial.println(F("GPS"));
+    led(POWER_LED, LED_OFF);
     if ( GPS() ) led(POWER_LED, LED_GREEN);
     else led(POWER_LED, LED_YELLOW);
   }

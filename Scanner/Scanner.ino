@@ -21,12 +21,12 @@ char IMEI[20];
 #define SCANNER_AIM     12
 #define SCANNER_TRIGGER 13
 #define SCANNER_PWRDOWN 5
-#define SCAN_BUTTON     7
+#define SCAN_BUTTON     2
 #define BUZZER          6
 
 #define GSM_RX    8
 #define GSM_TX    9
-#define GSM_BOOT_PIN  10
+#define GSM_BOOT_PIN  7
 
 
 // AltSoftSerial - Can be sensitive to interrupt usage by other libraries.
@@ -39,8 +39,8 @@ char IMEI[20];
 /////////////////////////////////////////
 // GSM/FTP DEFINITION AND SETUP
 /////////////////////////////////////////
-//SoftwareSerial GsmSerial(GSM_RX, GSM_TX); // RX, TX GSM
-AltSoftSerial GsmSerial;
+SoftwareSerial GsmSerial(GSM_RX, GSM_TX); // RX, TX GSM
+//AltSoftSerial GsmSerial;
 GSMSIM GSMSIM(GSM_BOOT_PIN, TmpBuffer, sizeof(TmpBuffer),  GsmSerial);
 
 
@@ -48,11 +48,7 @@ GSMSIM GSMSIM(GSM_BOOT_PIN, TmpBuffer, sizeof(TmpBuffer),  GsmSerial);
 
 /////////////////////////////////////////
 // APP DEFINITION
-/////////////////////////////////////////
-#define UPDATETIMEFINAL 600     // Final update interval 
-#define UPDATETIMEINITIAL 60;   // initial update interval
 
-long int NextConnectionTime = 15;
 
 /////////////////////////////////////////
 // EEPROM24C04 DEFINITION
@@ -80,19 +76,13 @@ void setup()
   //SETUP PIN
   //***************************************
 
-  pinMode(SCANNER_AIM, OUTPUT);
-  digitalWrite(SCANNER_AIM, 1);
-
-  pinMode(SCANNER_TRIGGER, OUTPUT);
-  digitalWrite(SCANNER_TRIGGER, 1);
-
+  pinMode(SCANNER_AIM, OUTPUT);     digitalWrite(SCANNER_AIM, 1);
+  pinMode(SCANNER_TRIGGER, OUTPUT); digitalWrite(SCANNER_TRIGGER, 1);
+  pinMode(GSM_BOOT_PIN, OUTPUT);    digitalWrite(GSM_BOOT_PIN, 0);
+  pinMode(BUZZER, OUTPUT);          digitalWrite(BUZZER, 0);
   pinMode(SCANNER_PWRDOWN, INPUT);
   pinMode(SCAN_BUTTON, INPUT_PULLUP);
 
-
-  pinMode(GSM_BOOT_PIN, OUTPUT);
-
-  pinMode(BUZZER, OUTPUT);
 
   //***************************************
   //SETUP BUZZER
@@ -108,17 +98,9 @@ void setup()
   ScannerSerial.begin(9600);
   //ScannerSerial.listen();
   digitalWrite(SCANNER_AIM, 1);
-  Serial.print("Scanner powerdown pin: ");
+  Serial.print(F("Scanner powerdown pin: "));
   Serial.println(digitalRead(SCANNER_PWRDOWN));
   //while(digitalRead(SCANNER_PWRDOWN)) digitalWrite(SCANNER_AIM, 0);
-
-  //***************************************
-  //SETUP GSM
-  //***************************************
-  GsmSerial.begin(4800);
-  GsmSerial.listen();
-  GSMSIM.BootGSM(IMEI);
-  GPS();
 
 
 
@@ -130,55 +112,59 @@ void setup()
 #define GPIO_INVERSION 2
 #define GPIO_CONFIGURATION 3
 #define GPIO_ADDR 0x18
+
+#define LED_RED    1
+#define LED_YELLOW 3
+#define LED_GREEN  2
+#define LED_OFF    0
+
+#define GSM_LED    1
+#define POWER_LED  0
+#define SCANNER_LED   2
+
   Wire.begin();
 
-  Serial.print("GPIO configuration: ") ;
-  Serial.println(get_register(GPIO_ADDR, GPIO_CONFIGURATION), HEX);
-  Serial.print("GPIO inversion: ") ;
-  Serial.println(get_register(GPIO_ADDR, GPIO_INVERSION), HEX);
-
   set_register(GPIO_ADDR, GPIO_INVERSION, 0x0);
-  Serial.print("GPIO configuration: ") ;
-  Serial.println(get_register(GPIO_ADDR, GPIO_INVERSION), HEX);
-
-
   set_register(GPIO_ADDR, GPIO_CONFIGURATION, 0x0);
-  Serial.print("GPIO configuration: ") ;
-  Serial.println(get_register(GPIO_ADDR, GPIO_CONFIGURATION), HEX);
 
-  // Wire.requestFrom(address, 1);         // Tell slave we need to read 1byte from the current register
-  // value = Wire.read();
-  //while(1)
-  if(0){
-    set_register(GPIO_ADDR, GPIO_OUTPUT, 0x00);
-    delay(500);
-    Serial.print("GPIO input: ") ;
-    Serial.println(get_register(GPIO_ADDR, GPIO_INPUT), HEX);
-    set_register(GPIO_ADDR, GPIO_OUTPUT, 0x55);
-    delay(500);
-    Serial.print("GPIO input: ") ;
-    Serial.println(get_register(GPIO_ADDR, GPIO_INPUT), HEX);
-    set_register(GPIO_ADDR, GPIO_OUTPUT, 0xFF);
-    delay(500);
-    Serial.print("GPIO input: ") ;
-    Serial.println(get_register(GPIO_ADDR, GPIO_INPUT), HEX);
-    set_register(GPIO_ADDR, GPIO_OUTPUT, 0xAA);
-    delay(500);
-    Serial.print("GPIO input: ") ;
-    Serial.println(get_register(GPIO_ADDR, GPIO_INPUT), HEX);
-  }
-
-  set_register(GPIO_ADDR, GPIO_OUTPUT, 0xFF);
   delay(500);
-  Serial.print("GPIO input: ") ;
-  Serial.println(get_register(GPIO_ADDR, GPIO_INPUT), HEX);
+  led(POWER_LED, LED_RED);
+  led(GSM_LED, LED_RED);
+  led(SCANNER_LED, LED_RED);
+  delay(700);
+  led(POWER_LED, LED_YELLOW);
+  led(GSM_LED, LED_YELLOW);
+  led(SCANNER_LED, LED_YELLOW);
 
+
+
+
+  //***************************************
+  //SETUP GSM
+  //***************************************
+  Serial.print(F("GSM setup: "));
+  GsmSerial.begin(19200);
+  GsmSerial.listen();
+  while (GSMSIM.BootGSM(IMEI) == GSMERROR)
+  {
+    led(GSM_LED, LED_RED);
+    led(POWER_LED, LED_OFF);
+    analogWrite(BUZZER, 150);
+    delay(500);
+    analogWrite(BUZZER, 0);
+    led(POWER_LED, LED_RED);
+  }
+  led(GSM_LED, LED_GREEN);
+
+
+  if ( GPS() ) led(POWER_LED, LED_GREEN);
+  else led(POWER_LED, LED_YELLOW);
 
   //***************************************
   //EEPROM
   //***************************************
 #ifdef EEPROM
-  Serial.print("TEST EXTERNAL EEPROM ... ");
+  Serial.print(F("TEST EXTERNAL EEPROM ... "));
   eeprom.initialize();
   eeprom.writeByte(4, 0x37);     delay(100);
   eeprom.writeByte(31, 0x53);    delay(100);
@@ -195,7 +181,7 @@ void setup()
     TmpBuffer[i] = 0;
   }
   eeprom.writeBytes(0, 100, (byte *) TmpBuffer);
-  Serial.println(" COMPLETED");
+  Serial.println(F(" COMPLETED"));
 #endif
 
   //***************************************
@@ -207,6 +193,8 @@ void setup()
   delay(1000);
   analogWrite(BUZZER, 0);
 
+  led(POWER_LED, LED_GREEN);
+  led(SCANNER_LED, LED_OFF);
 
 }
 
@@ -220,12 +208,12 @@ void printHelp()
 void loop() // run over and over
 {
 
-  if(!digitalRead(SCAN_BUTTON))scan();
+  if (!digitalRead(SCAN_BUTTON))scan(0);
 
   //////////////////////////////////////////////////////
   // CONSOLE COMMAND PROCESSING
   //////////////////////////////////////////////////////
- 
+
 
   if (Serial.available())
   {
@@ -239,7 +227,7 @@ void loop() // run over and over
       case 'G': GPS(); break;
       case 'f': Serial.println(F("low power")); GSMSIM.ConfGSM(0); break;
       case 'p': post("SCANID1,  SEQN,TIME,Lat,Lon"); break;
-      case 's': scan(); break;
+      case 's': scan(1); break;
       case 't': test(); break;
       default: printHelp();
     }
@@ -250,8 +238,9 @@ void loop() // run over and over
     }
     Serial.println(F("cmd# "));
   }
-  if ((millis() % 400000) == 0) {
-    GPS();
+  if ((millis() % 20000) == 0) {
+    if ( GPS() ) led(POWER_LED, LED_GREEN);
+    else led(POWER_LED, LED_YELLOW);
   }
 }//end loop
 
@@ -262,31 +251,11 @@ void pipe()
 
 void test()
 {
-  unsigned char c = 0 ;
-  int i;
-  int fix = 0;
-  char  scanTmp[100];
-  ScannerSerial.listen();
-  while (Serial.read() != 'x')
-  {
-    digitalWrite(SCANNER_TRIGGER, 0);
-    Serial.println("start scan");
-    while (!ScannerSerial.available());
-    Serial.println("end scan");
-    digitalWrite(SCANNER_TRIGGER, 1);
-    delay(500);
-    i = 0;
-    while (ScannerSerial.available() && i < 99) scanTmp[i++] = ScannerSerial.read();
-    if (i == 99) {
-      Serial.println("buffer overfolow "); while (ScannerSerial.available()) ScannerSerial.read();
-    }
-    scanTmp[i++] = 0;
-    Serial.println(scanTmp);
 
-    GsmSerial.listen();
-  }
 }
-void scan()
+
+
+void scan(int mode)
 {
   unsigned char c = 0 ;
   int i;
@@ -305,26 +274,48 @@ void scan()
     8     checksum    1
     190+16
   */
+  led(SCANNER_LED, LED_YELLOW);
 
   ScannerSerial.listen();
   digitalWrite(SCANNER_TRIGGER, 0);
-  Serial.println("start scan");
-  while (!ScannerSerial.available());
+  Serial.println(F("start scan"));
+  while (!ScannerSerial.available() &&  (mode || !digitalRead(SCAN_BUTTON)));
+  if (!ScannerSerial.available())   // non ho letto nulla
+  {
+    int j;
+    digitalWrite(SCANNER_TRIGGER, 1);
+    for (j = 0; j < 1000; j++)
+    {
+      digitalWrite(BUZZER, 1);
+      delayMicroseconds(200);
+      digitalWrite(BUZZER, 0);
+      delayMicroseconds(200);
+    }
+    Serial.println(F("No acquisition!\n"));
+    led(SCANNER_LED, LED_RED);
+    delay(500);
+    led(SCANNER_LED, LED_OFF);
+    return;
+  }
+  digitalWrite(SCANNER_TRIGGER, 1);
+  led(SCANNER_LED, LED_GREEN);
   analogWrite(BUZZER, 150);
   delay(500);
   analogWrite(BUZZER, 30);
-    delay(500);
+  delay(500);
   analogWrite(BUZZER, 0);
-  Serial.println("end scan");
-  digitalWrite(SCANNER_TRIGGER, 1);
+  Serial.println(F("End scan"));
+
   i = 0;
   while (ScannerSerial.available() && i < 100 ) scanTmp[i++] = ScannerSerial.read();
   if (i == 100) {
-    Serial.println("buffer overfolow "); while (ScannerSerial.available()) ScannerSerial.read();
+    Serial.println(F("buffer overflow ")); while (ScannerSerial.available()) ScannerSerial.read();
   }
-  scanTmp[i-1] = 0;
- // for(i=0;scanTmp[i]; i++) Serial.println((int)scanTmp[i]);
+  scanTmp[i - 1] = 0;
+  // for(i=0;scanTmp[i]; i++) Serial.println((int)scanTmp[i]);
+  Serial.println(F("READ: "));
   Serial.println(scanTmp);
+  led(GSM_LED, LED_YELLOW);
   GsmSerial.listen();
   GsmSerial.println(F("AT+CGNSINF"));
   GSMSIM.GSM_Response(2);
@@ -334,7 +325,7 @@ void scan()
 
   strtok(TmpBuffer, ",");
   if ( *strtok(0, ",") == '1') fix = 1; //fix
-  strcat(ScanBuffer, strtok(0, ".")); // time stamp
+  strcat(ScanBuffer, strtok(0, ".")); // time stamp prendo sempre il piu' recente
   pipe();
   if (!fix) {
     strncpy(TmpBuffer, ScanBuffer + 100, 100);
@@ -342,7 +333,13 @@ void scan()
     strtok(0, ",");
     strtok(0, ".");
     ScanBuffer[0] = '?';
+    led(POWER_LED, LED_YELLOW);
+  } else {
+    led(POWER_LED, LED_GREEN);
   }
+
+
+
   strtok(0, ","); //reserved
   strcat(ScanBuffer, strtok(0, ",")); // lat
   pipe();
@@ -382,12 +379,18 @@ void scan()
     Serial.println("Disastro!\n");
     Serial.println( (unsigned char) * (strstr(TmpBuffer, "OK") + 1));
     Serial.println(ScanBuffer + i);
+    led(GSM_LED, LED_RED);
   }
-  else Serial.println("Successo!\n");
+  else
+  {
+    Serial.println("Successo!\n");
+    led(GSM_LED, LED_GREEN);
+  }
+  led(SCANNER_LED, LED_OFF);
 }
 
 
-void GPS()
+int GPS()
 {
   int fix = 0;
   GsmSerial.println(F("AT+CGNSINF"));
@@ -419,6 +422,7 @@ void GPS()
     strncpy(ScanBuffer + 100, ScanBuffer, 100);   // salviamo ogni tanto
     Serial.println (F("SAVE"));
   }
+  return fix;
 }
 
 
@@ -446,6 +450,11 @@ int  post(char *msg)
   if ((int) * (strstr(TmpBuffer, "#") + 1) != (int) ScanBuffer[64]) Serial.println("Disastro!\n"); else Serial.println("Successo!\n");
 }
 
-
-
+int statusLed = 0;
+void led(int n, int c)
+{
+  statusLed &= ~(0x3 << (2 + n * 2));
+  statusLed |=   (c << (2 + n * 2));
+  set_register(GPIO_ADDR, GPIO_OUTPUT, statusLed);
+}
 

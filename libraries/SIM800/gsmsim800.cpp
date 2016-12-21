@@ -29,12 +29,8 @@ GSMSIM::GSMSIM(int BOOT_PIN, char*buffer, int ExtBufferSize, Stream& S)
   //***************************************
   //SETUP GSM
   //***************************************
-
-  if (BOOT_PIN >= 0 )
-  {
-    digitalWrite(BOOT_PIN, HIGH);
-    pinMode(BOOT_PIN, OUTPUT);
-  }
+  pinMode(BOOT_PIN, OUTPUT);    
+  digitalWrite(BOOT_PIN, 0);
   BootPin = BOOT_PIN;
 }
 
@@ -119,10 +115,10 @@ int GSMSIM::GSM_AT(const __FlashStringHelper * ATCommand)
   long int start = millis();
 
   ExtBuffer[0] = 0;
- // Serial.println(ATCommand);
+  Serial.println(ATCommand);
 
   m_gsmSerial.println(ATCommand);
-  while ((millis() < (start + 6000)) && (done == GSMUNKNOWN))
+  while ((millis() < (start + 4000)) && (done == GSMUNKNOWN))
   {
     if (m_gsmSerial.available()) ExtBuffer[i++] = m_gsmSerial.read();
     if (i > 2) if (!strncmp(ExtBuffer + i - 3, "OK", 2)) done = GSMOK;
@@ -246,6 +242,31 @@ int GSMSIM::BootGSM(char *imei)
   long int start;
   int retry = 3;
 
+  
+  if ( 1 )
+  {
+    if ( GSM_AT(F("AT")) != GSMOK) 
+	{
+		Serial.println(F("Booting GSM ..."));
+        digitalWrite(BootPin, HIGH);
+	    delay(2000);
+        digitalWrite(BootPin, LOW);
+		Serial.println(F("done"));
+		delay(1000);
+	}
+  
+   if ( GSM_AT(F("AT")) != GSMOK) 
+	{
+		Serial.println(F("Booting GSM ..."));
+        digitalWrite(BootPin, HIGH);
+	    delay(2000);
+        digitalWrite(BootPin, LOW);
+		Serial.println(F("done"));
+		delay(1000);
+	}
+  }
+  
+  
   if (! ExtBuffer ) Serial.println(F("Error: Ext Buffer size too small"));
     if ( GSM_AT(F("AT+CFUN=1")) != GSMOK) return GSMERROR ;
     if ( GSM_AT(F("AT+CREG?")) != GSMOK) return GSMERROR ;

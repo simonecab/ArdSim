@@ -88,7 +88,14 @@ Eeprom24C04_16::Eeprom24C04_16
 void
 Eeprom24C04_16::initialize()
 {
+#ifdef STM
+int pinSDA = PB4;
+int pinSCL = PB5;
+#define Wire MyWire
+TwoWire MyWire(pinSCL, pinSDA);
+#else
     Wire.begin();
+#endif
 }
 
 /**************************************************************************//**

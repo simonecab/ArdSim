@@ -27,7 +27,15 @@
 
 #include <Wire.h>
 
-TwoWire Mywire (PB5,PB4);
+#ifdef STM32
+#define pinSDA PB4
+#define pinSCL PB5
+
+TwoWire Mywire(pinSCL, pinSDA);
+#else
+#define Mywire Wire
+#endif
+
 void setup()
 {
   Mywire.begin();

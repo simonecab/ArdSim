@@ -2,11 +2,14 @@
 
 
 
-
+#ifdef STM32
 #define pinSDA PB4
 #define pinSCL PB5
 
 TwoWire Mywire(pinSCL, pinSDA);
+#else
+#define Mywire Wire
+#endif
 
 void writeByte
 (
@@ -27,7 +30,7 @@ byte readByte (     byte address ) {
   Mywire.beginTransmission((byte)(0x50));
   Mywire.write(address);
   Mywire.endTransmission();
-  Mywire.requestFrom( 0x50, (byte)1);
+  Mywire.requestFrom( (byte)0x50, (byte)1);
   byte data = 0;
   delay(5);
   if (Mywire.available())

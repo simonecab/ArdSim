@@ -79,7 +79,7 @@ void draw(void) {
   u8g.setFont(u8g_font_unifont);
   u8g.setPrintPos(0, 10);
   // call procedure from base class, http://arduino.cc/en/Serial/Print
-  u8g.print("   Hello World!");
+  u8g.print("  Hello World!!");
   u8g.setPrintPos(0, 30);
   // call procedure from base class, http://arduino.cc/en/Serial/Print
   u8g.print("   NEAT IS READY");

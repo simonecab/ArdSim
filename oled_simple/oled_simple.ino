@@ -21,7 +21,7 @@ void setup()   {
   display.begin(SSD1306_SWITCHCAPVCC, 0x3C);  // initialize with the I2C addr 0x3C (for the 128x32)
   //display.display();
   delay(2000);
-  display.setRotation(1);
+  display.setRotation(0);
   display.clearDisplay();
     display.display();
     delay(3000);
